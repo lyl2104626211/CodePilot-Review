@@ -9,8 +9,7 @@ from app.workflows.review_graph import build_review_graph
 
 # 模块级单例：第 2 天 Demo 模式关闭时，需要替换 provider 注入
 store = MemoryTaskStore()
-mock_provider = MockGitHubProvider()
-review_graph = build_review_graph(mock_provider)
+demo_graph = build_review_graph(MockGitHubProvider())
 
 
 async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTaskResponse:
@@ -18,13 +17,26 @@ async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTa
 
     流程：
     1. 生成唯一 task_id
-    2. 构造 LangGraph 初始状态
+    2. 根据 mode 选择 Provider（demo 用 Mock，github 待接入）
     3. 异步执行工作流（parse → fetch → review → assemble）
     4. 将结果存入 MemoryTaskStore
     5. 返回 task_id 和状态
     """
     task_id = f"task_{uuid.uuid4().hex[:24]}"
     logger.info("开始执行 Review 工作流 | task_id={} url={} mode={}", task_id, request.url, request.mode)
+
+    # 模式路由：github 模式暂未接入真实 GitHub Provider
+    if request.mode == "github":
+        logger.warning("GitHub 模式暂未接入 | task_id={}", task_id)
+        error_report = ReviewReport(
+            task_id=task_id,
+            status=TaskStatus.failed,
+            error_message="GitHub mode is not yet available. Please use demo mode or wait for Day 2 integration.",
+        )
+        store.save(error_report)
+        return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.failed)
+
+    review_graph = demo_graph
 
     # 工作流初始状态：只需 task_id, url, mode
     state = {
