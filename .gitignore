@@ -12,6 +12,9 @@ dist-ssr/
 # Env
 .env
 
+# Logs
+logs/
+
 # IDE
 .vscode/
 .idea/

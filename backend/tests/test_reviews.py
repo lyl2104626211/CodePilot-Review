@@ -61,3 +61,24 @@ async def test_create_review_with_invalid_url():
             json={"url": "not-a-valid-url", "mode": "demo"},
         )
     assert response.status_code == 422
+
+
+async def test_create_review_github_mode_returns_failed():
+    """验证 GitHub 模式暂未接入时返回 failed 状态和明确提示"""
+    app = create_app()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/reviews",
+            json={"url": "https://github.com/acme/codepilot/pull/12", "mode": "github"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "failed"
+
+        # 查询报告确认 error_message 存在
+        task_id = data["task_id"]
+        get_resp = await client.get(f"/api/reviews/{task_id}")
+        report = get_resp.json()
+        assert report["status"] == "failed"
+        assert "github" in report["error_message"].lower()
