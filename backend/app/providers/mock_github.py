@@ -2,7 +2,13 @@ from app.schemas.github import ParsedPullRequest, PullRequestFile, PullRequestSn
 
 
 class MockGitHubProvider:
+    """Mock GitHub Provider：返回固定的演示数据，无需 Token 和网络请求
+
+    实现了 PullRequestProvider Protocol 的方法签名，可直接注入到 review_graph。
+    """
+
     async def get_pull_request(self, ref: ParsedPullRequest) -> PullRequestSnapshot:
+        """返回一份固定的 Mock PR 快照，方便第 1 天演示和测试"""
         return PullRequestSnapshot(
             owner=ref.owner,
             repo=ref.repo,
