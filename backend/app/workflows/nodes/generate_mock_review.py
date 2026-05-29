@@ -4,6 +4,11 @@ from app.workflows.review_state import ReviewGraphState
 
 
 def generate_mock_review_node(state: ReviewGraphState) -> ReviewGraphState:
+    """节点3：生成 Mock 分析结果
+
+    第 1 天返回固定的 summary、findings、suggestions 和 test_recommendations。
+    第 2 天拆分为 LLM 驱动的总结、风险分析、建议生成节点。
+    """
     if state.get("error_message"):
         return state
 

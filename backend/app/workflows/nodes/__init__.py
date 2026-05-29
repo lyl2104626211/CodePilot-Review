@@ -1,3 +1,4 @@
+# LangGraph 工作流节点，每个文件一个节点函数，职责单一
 from app.workflows.nodes.parse_pr_url import parse_pr_url_node
 from app.workflows.nodes.fetch_mock_pr import fetch_mock_pr_node
 from app.workflows.nodes.generate_mock_review import generate_mock_review_node

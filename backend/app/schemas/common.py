@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class TaskStatus(str, Enum):
+    """Review 任务状态枚举"""
     queued = "queued"
     running = "running"
     succeeded = "succeeded"
@@ -9,6 +10,7 @@ class TaskStatus(str, Enum):
 
 
 class RiskSeverity(str, Enum):
+    """风险严重程度枚举"""
     critical = "critical"
     high = "high"
     medium = "medium"
@@ -16,6 +18,7 @@ class RiskSeverity(str, Enum):
 
 
 class RiskCategory(str, Enum):
+    """风险类别枚举"""
     correctness = "correctness"
     security = "security"
     performance = "performance"

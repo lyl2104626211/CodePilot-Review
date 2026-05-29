@@ -4,6 +4,7 @@ from app.main import create_app
 
 
 async def test_health_endpoint():
+    """验证 /api/health 返回 {"status": "ok"}"""
     app = create_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -13,6 +14,7 @@ async def test_health_endpoint():
 
 
 async def test_version_endpoint():
+    """验证 /api/version 返回应用名称、版本号和环境"""
     app = create_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

@@ -4,6 +4,11 @@ from app.workflows.review_state import ReviewGraphState
 
 
 def assemble_report_node(state: ReviewGraphState) -> ReviewGraphState:
+    """节点4：组装最终 ReviewReport
+
+    将前序节点产出的 summary、findings、suggestions、test_recommendations
+    以及 PR 快照拼装为完整的 ReviewReport，写入 state["report"]。
+    """
     if state.get("error_message"):
         return state
 
