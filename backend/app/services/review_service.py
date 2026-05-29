@@ -1,7 +1,9 @@
 import uuid
 
+from app.core.config import settings
 from app.core.logger import logger
 from app.llm.fallback import FallbackLLMClient
+from app.llm.openai_compatible import OpenAICompatibleLLMClient
 from app.providers.github import GitHubProvider
 from app.providers.mock_github import MockGitHubProvider
 from app.schemas.review import CreateReviewTaskRequest, CreateReviewTaskResponse, ReviewReport
@@ -9,11 +11,28 @@ from app.schemas.common import TaskStatus
 from app.storage.memory_store import MemoryTaskStore
 from app.workflows.review_graph import build_demo_graph, build_review_graph
 
-# 模块级单例：demo 模式共用一份编译好的 graph
+# 模块级单例
 store = MemoryTaskStore()
 demo_graph = build_demo_graph(MockGitHubProvider())
-# LLM 降级客户端：GitHub 模式下默认使用（后续可通过配置切换为真实 API）
-fallback_llm = FallbackLLMClient()
+
+
+def _create_llm_client():
+    """根据环境配置创建 LLM 客户端
+
+    规则：
+    - 若 MODEL_API_KEY 已配置，使用 OpenAICompatibleLLMClient（真实模型）
+    - 否则使用 FallbackLLMClient（基于规则，无需 API Key）
+    """
+    if settings.model_api_key:
+        logger.info("使用真实 LLM 客户端 | provider={} model={} base_url={}",
+                    settings.model_provider, settings.model_name, settings.model_base_url)
+        return OpenAICompatibleLLMClient(
+            base_url=settings.model_base_url,
+            api_key=settings.model_api_key,
+            model=settings.model_name,
+        )
+    logger.info("MODEL_API_KEY 未配置，使用 Fallback LLM 客户端")
+    return FallbackLLMClient()
 
 
 async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTaskResponse:
@@ -33,8 +52,9 @@ async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTa
     github_provider = None
     if request.mode == "github":
         github_provider = GitHubProvider()
+        llm_client = _create_llm_client()
         try:
-            review_graph = build_review_graph(github_provider, fallback_llm)
+            review_graph = build_review_graph(github_provider, llm_client)
         except Exception as e:
             logger.error("GitHub Provider 初始化失败 | task_id={} error={}", task_id, str(e))
             await github_provider.close()

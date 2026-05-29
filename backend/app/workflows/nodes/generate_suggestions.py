@@ -52,23 +52,27 @@ def generate_suggestions_node(llm: LLMClient):
             raw_suggestions = result.get("suggestions", [])
             suggestions = []
             for i, rs in enumerate(raw_suggestions):
-                suggestions.append(ReviewSuggestion(
-                    id=rs.get("id", f"suggestion_{i+1:03d}"),
-                    finding_id=rs.get("finding_id"),
-                    file_path=rs.get("file_path"),
-                    comment=rs.get("comment", ""),
-                    rationale=rs.get("rationale", ""),
-                    suggested_fix=rs.get("suggested_fix", ""),
-                    blocking=bool(rs.get("blocking", False)),
-                ))
+                try:
+                    suggestions.append(ReviewSuggestion(
+                        id=rs.get("id", f"suggestion_{i+1:03d}"),
+                        finding_id=rs.get("finding_id"),
+                        file_path=rs.get("file_path"),
+                        comment=rs.get("comment", ""),
+                        rationale=rs.get("rationale", ""),
+                        suggested_fix=rs.get("suggested_fix", ""),
+                        blocking=bool(rs.get("blocking", False)),
+                    ))
+                except (ValueError, TypeError) as e:
+                    logger.warning("[工作流] 单条 suggestion 解析失败，已跳过 | error={}", str(e))
+                    continue
 
             state["suggestions"] = suggestions
             state["test_recommendations"] = result.get("test_recommendations", [])
 
             logger.debug("[工作流] generate_suggestions 节点完成 | task_id={} suggestions={} test_recs={}",
                         state.get("task_id"), len(suggestions), len(state["test_recommendations"]))
-        except LLMError as e:
-            logger.error("[工作流] generate_suggestions LLM 调用失败 | task_id={} error={}",
+        except (LLMError, ValueError, TypeError) as e:
+            logger.error("[工作流] generate_suggestions 生成失败 | task_id={} error={}",
                         state.get("task_id"), str(e))
             state["suggestions"] = []
             state["test_recommendations"] = []

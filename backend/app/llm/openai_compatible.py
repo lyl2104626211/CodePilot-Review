@@ -27,8 +27,8 @@ class OpenAICompatibleLLMClient:
         model: str | None = None,
         timeout_seconds: int = 60,
     ):
-        self._base_url = (base_url or "https://api.deepseek.com/v1").rstrip("/")
-        self._api_key = api_key or ""
+        self._base_url = (base_url or settings.model_base_url).rstrip("/")
+        self._api_key = api_key or settings.model_api_key
         self._model = model or settings.model_name
         self._client = httpx.AsyncClient(
             base_url=self._base_url,

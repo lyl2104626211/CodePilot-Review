@@ -65,8 +65,8 @@ def detect_risks_node(llm: LLMClient):
             state["findings"] = findings
             logger.debug("[工作流] detect_risks 节点完成 | task_id={} findings={}",
                         state.get("task_id"), len(findings))
-        except LLMError as e:
-            logger.error("[工作流] detect_risks LLM 调用失败 | task_id={} error={}",
+        except (LLMError, ValueError, TypeError) as e:
+            logger.error("[工作流] detect_risks 生成失败 | task_id={} error={}",
                         state.get("task_id"), str(e))
             state["findings"] = []
             state.setdefault("warnings", []).append(f"Risk detection failed, returning empty findings: {e}")

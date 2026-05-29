@@ -61,10 +61,10 @@ def generate_summary_node(llm: LLMClient):
             )
 
             logger.debug("[工作流] generate_summary 节点完成 | task_id={}", state.get("task_id"))
-        except LLMError as e:
-            logger.error("[工作流] generate_summary LLM 调用失败 | task_id={} error={}",
+        except (LLMError, ValueError, TypeError) as e:
+            logger.error("[工作流] generate_summary 生成失败 | task_id={} error={}",
                         state.get("task_id"), str(e))
-            # LLM 失败时使用降级总结
+            # LLM 失败或输出格式异常时使用降级总结
             state["summary"] = ReviewSummary(
                 overview=f"本 PR 对 {state['pr_snapshot'].changed_files} 个文件进行了变更。",
                 changed_modules=["backend", "tests"],

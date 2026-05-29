@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     # 模型配置：供应商 + 模型名称，第 2 天接入 LLM 时使用
     model_provider: str = "deepseek"
     model_name: str = "deepseek-v4-pro"
+    model_base_url: str = "https://api.deepseek.com/v1"
+    model_api_key: str = ""
     request_timeout_seconds: int = 120
 
     # Demo 模式：True 时使用 Mock Provider，无需 Token 和模型 API
