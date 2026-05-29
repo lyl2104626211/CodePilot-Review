@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
 const props = defineProps<{
   loading: boolean
   status?: string
@@ -8,102 +6,105 @@ const props = defineProps<{
 }>()
 
 const stages = [
-  { key: 'parse', label: 'URL 解析' },
-  { key: 'fetch', label: 'PR 获取' },
-  { key: 'context', label: '上下文收集' },
-  { key: 'summary', label: '总结生成' },
-  { key: 'risks', label: '风险识别' },
-  { key: 'suggestions', label: '建议生成' },
-  { key: 'guardrail', label: '质量检查' },
-  { key: 'assemble', label: '报告组装' },
+  'PARSE', 'FETCH', 'CONTEXT', 'SUMMARY',
+  'RISKS', 'SUGGEST', 'GUARD', 'REPORT',
 ]
 
-const currentStageIndex = computed(() => {
-  if (!props.loading && props.status === 'succeeded') return stages.length
-  if (props.status === 'failed') return -1
-  if (props.loading) return 1 // 至少前两个阶段在跑
-  return 0
-})
+function stageState(i: number): 'done' | 'active' | 'pending' | 'fail' {
+  if (props.status === 'failed' && !props.loading) return 'fail'
+  if (i === 0 && props.loading) return 'active'
+  if (!props.loading && props.status === 'succeeded') return 'done'
+  if (props.loading && i === 0) return 'done'
+  return 'pending'
+}
 </script>
 
 <template>
-  <div v-if="loading || status === 'succeeded' || status === 'failed'" class="progress-timeline">
-    <h3>分析进度</h3>
-    <div class="timeline">
+  <div v-if="loading || status === 'succeeded' || status === 'failed'" class="progress-bar">
+    <div class="stages">
       <div
-        v-for="(stage, i) in stages"
-        :key="stage.key"
-        :class="[
-          'stage',
-          { done: i < currentStageIndex, current: i === currentStageIndex && loading, failed: status === 'failed' && i === currentStageIndex }
-        ]"
+        v-for="(label, i) in stages"
+        :key="label"
+        :class="['stage', stageState(i)]"
       >
-        <span class="dot"></span>
-        <span class="label">{{ stage.label }}</span>
+        <span class="stage-dot"></span>
+        <span class="stage-label">{{ label }}</span>
       </div>
     </div>
-    <div v-if="warnings && warnings.length" class="warnings-box">
-      <p v-for="(w, i) in warnings" :key="i" class="warning-item">{{ w }}</p>
+    <div v-if="warnings?.length" class="warn-list">
+      <p v-for="(w, i) in warnings" :key="i" class="warn-item">{{ w }}</p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.progress-timeline {
-  margin-bottom: 20px;
-  padding: 16px 20px;
-  background: #f9fafb;
-  border-radius: 8px;
+.progress-bar {
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
-h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
-}
-.timeline {
+
+.stages {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  gap: 0;
+  overflow-x: auto;
 }
+
 .stage {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #aaa;
-}
-.stage.done {
-  color: #5cb85c;
-}
-.stage.current {
-  color: #4a90d9;
+  gap: 5px;
+  font-size: 9px;
   font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  padding: 0 8px;
 }
-.stage.failed {
-  color: #d9534f;
+.stage:first-child { padding-left: 0; }
+.stage::after {
+  content: '\2192';
+  margin-left: 8px;
+  color: var(--border);
+  font-size: 10px;
 }
-.dot {
-  width: 8px;
-  height: 8px;
+.stage:last-child::after { display: none; }
+
+.stage.done { color: var(--success); }
+.stage.done .stage-dot { background: var(--success); }
+
+.stage.active { color: var(--accent); }
+.stage.active .stage-dot {
+  background: var(--accent);
+  animation: pulse-dot 1s infinite;
+}
+
+.stage.fail { color: var(--danger); }
+.stage.fail .stage-dot { background: var(--danger); }
+
+.stage-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #ddd;
+  background: var(--border-hover);
+  flex-shrink: 0;
 }
-.stage.done .dot { background: #5cb85c; }
-.stage.current .dot { background: #4a90d9; animation: pulse 1s infinite; }
-.stage.failed .dot { background: #d9534f; }
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50% { box-shadow: 0 0 0 4px transparent; }
 }
-.warnings-box {
+
+.warn-list {
   margin-top: 10px;
-  padding: 8px 12px;
-  background: #fff8e1;
-  border-radius: 6px;
-  border: 1px solid #ffe082;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
-.warning-item {
+.warn-item {
   margin: 2px 0;
-  font-size: 12px;
-  color: #f0ad4e;
+  font-size: 11px;
+  color: var(--warning);
+  font-family: var(--font-mono);
 }
 </style>

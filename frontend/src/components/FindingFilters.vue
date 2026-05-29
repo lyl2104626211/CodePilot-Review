@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { RiskFinding } from '../types/review'
 
 const props = defineProps<{
@@ -24,82 +24,96 @@ const filtered = computed(() => {
   return result
 })
 
-// 实时通知父组件
-import { watch } from 'vue'
 watch(filtered, (val) => emit('update:filtered', val), { immediate: true })
 
-const severities = [
-  { value: 'all', label: '全部' },
-  { value: 'critical', label: '严重' },
-  { value: 'high', label: '高' },
-  { value: 'medium', label: '中' },
-  { value: 'low', label: '低' },
-]
+const filters = ['all', 'critical', 'high', 'medium', 'low']
 </script>
 
 <template>
-  <div v-if="findings.length > 0" class="finding-filters">
-    <div class="filter-row">
-      <span class="filter-label">严重程度：</span>
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">SEV</span>
       <button
-        v-for="s in severities"
-        :key="s.value"
-        :class="['filter-btn', { active: selectedSeverity === s.value }]"
-        @click="selectedSeverity = s.value"
+        v-for="f in filters"
+        :key="f"
+        :class="['chip', { on: selectedSeverity === f }]"
+        @click="selectedSeverity = f"
       >
-        {{ s.label }}
+        {{ f === 'all' ? 'ALL' : f.toUpperCase() }}
       </button>
     </div>
-    <label class="confidence-toggle">
+
+    <label class="toggle">
       <input type="checkbox" v-model="showLowConfidence" />
-      显示低置信度 (&lt; 50%)
+      <span class="toggle-text">LOW CONF</span>
     </label>
-    <span class="filter-count">显示 {{ filtered.length }} / {{ findings.length }} 条</span>
+
+    <span class="count">{{ filtered.length }} / {{ findings.length }}</span>
   </div>
 </template>
 
 <style scoped>
-.finding-filters {
+.filter-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   padding: 8px 0;
+  flex-wrap: wrap;
 }
-.filter-row {
+
+.filter-group {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 .filter-label {
-  font-size: 13px;
-  color: #666;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-right: 6px;
 }
-.filter-btn {
-  padding: 2px 10px;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  background: #fff;
+
+.chip {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  transition: all 0.15s;
 }
-.filter-btn.active {
-  background: #4a90d9;
-  color: #fff;
-  border-color: #4a90d9;
+.chip.on {
+  background: var(--bg-elevated);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
-.confidence-toggle {
-  font-size: 12px;
-  color: #666;
+.chip:hover:not(.on) { border-color: var(--border-hover); }
+
+.toggle {
   display: flex;
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  user-select: none;
 }
-.filter-count {
-  font-size: 12px;
-  color: #999;
+.toggle input { accent-color: var(--accent); }
+.toggle-text {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.count {
   margin-left: auto;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 </style>

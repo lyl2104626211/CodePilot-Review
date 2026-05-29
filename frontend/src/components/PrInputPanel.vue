@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import type { ReviewMode } from '../types/review'
 
 defineProps<{
   loading: boolean
   error?: string
+  mode?: ReviewMode
 }>()
 
 const emit = defineEmits<{
@@ -17,7 +19,7 @@ function handleSubmit() {
   localError.value = ''
   const trimmed = url.value.trim()
   if (!trimmed) {
-    localError.value = '请输入 GitHub PR URL'
+    localError.value = 'Please enter a GitHub PR URL'
     return
   }
   emit('submit', trimmed)
@@ -25,79 +27,157 @@ function handleSubmit() {
 </script>
 
 <template>
-  <div class="pr-input-panel">
-    <h2>CodePilot Review</h2>
-    <p class="subtitle">AI 辅助 PR 评审助手 — 快速获取变更总结、风险识别与 Review 建议</p>
-
+  <div class="input-section">
     <div class="input-row">
+      <span class="prompt">$</span>
       <input
         v-model="url"
         type="text"
-        placeholder="https://github.com/{owner}/{repo}/pull/{number}"
+        placeholder="github.com/{owner}/{repo}/pull/{number}"
         :disabled="loading"
         @keyup.enter="handleSubmit"
       />
       <button :disabled="loading || !url.trim()" @click="handleSubmit">
-        {{ loading ? '分析中...' : '开始分析' }}
+        <template v-if="!loading">Run Review</template>
+        <template v-else>
+          <span class="spinner"></span> Analyzing...
+        </template>
       </button>
     </div>
-
-    <div class="demo-hint">当前为 Demo 模式，使用 Mock 数据演示</div>
-
-    <p v-if="localError || error" class="error-msg">{{ localError || error }}</p>
+    <div class="input-meta">
+      <span class="mode-tag" v-if="mode === 'demo'">MOCK DATA</span>
+      <span class="mode-tag live" v-else>LIVE GITHUB</span>
+      <span class="input-hint">Paste a PR URL and press Enter</span>
+    </div>
+    <p v-if="localError || error" class="error-line">
+      <span class="error-prefix">!</span> {{ localError || error }}
+    </p>
   </div>
 </template>
 
 <style scoped>
-.pr-input-panel {
+.input-section {
   margin-bottom: 24px;
 }
-h2 {
-  margin: 0 0 4px;
-  font-size: 22px;
-}
-.subtitle {
-  color: #666;
-  margin: 0 0 16px;
-  font-size: 14px;
-}
+
 .input-row {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  transition: border-color 0.2s;
 }
+.input-row:focus-within {
+  border-color: var(--border-active);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.prompt {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 15px;
+  user-select: none;
+}
+
 .input-row input {
   flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #d0d0d0;
-  border-radius: 6px;
-  font-size: 14px;
-}
-.input-row input:focus {
-  outline: none;
-  border-color: #4a90d9;
-}
-.input-row button {
-  padding: 8px 20px;
-  background: #4a90d9;
-  color: #fff;
+  background: transparent;
   border: none;
-  border-radius: 6px;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+.input-row input::placeholder {
+  color: var(--text-muted);
+}
+.input-row input:disabled {
+  opacity: 0.5;
+}
+
+.input-row button {
+  padding: 7px 18px;
+  background: var(--accent);
+  color: var(--bg-root);
+  border: none;
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   white-space: nowrap;
+  transition: background 0.2s, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.input-row button:hover:not(:disabled) {
+  background: #f5c542;
 }
 .input-row button:disabled {
-  background: #a0c4e8;
+  opacity: 0.5;
   cursor: not-allowed;
 }
-.demo-hint {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #999;
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--bg-root);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
 }
-.error-msg {
-  color: #d9534f;
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.input-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-top: 8px;
-  font-size: 13px;
+  padding: 0 4px;
+}
+
+.mode-tag {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-muted);
+}
+.mode-tag.live {
+  color: var(--teal);
+  border-color: var(--teal);
+}
+
+.input-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.error-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  background: var(--danger-glow);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--danger);
+}
+.error-prefix {
+  font-weight: 700;
+  font-size: 14px;
 }
 </style>

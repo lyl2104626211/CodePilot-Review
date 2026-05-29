@@ -7,18 +7,24 @@ defineProps<{
 </script>
 
 <template>
-  <div v-if="summary" class="review-summary">
-    <h3>变更总结</h3>
-    <p class="overview">{{ summary.overview }}</p>
-
-    <div class="modules">
-      <span class="section-label">变更模块：</span>
-      <span v-for="m in summary.changed_modules" :key="m" class="tag">{{ m }}</span>
+  <div v-if="summary" class="summary-card">
+    <div class="card-header">
+      <span class="card-icon">&#9636;</span>
+      <span>SUMMARY</span>
     </div>
 
-    <div class="focus">
-      <span class="section-label">评审重点：</span>
-      <ul>
+    <p class="overview">{{ summary.overview }}</p>
+
+    <div class="summary-row">
+      <span class="row-label">MODULES</span>
+      <div class="tag-list">
+        <span v-for="m in summary.changed_modules" :key="m" class="tag">{{ m }}</span>
+      </div>
+    </div>
+
+    <div class="summary-row">
+      <span class="row-label">FOCUS</span>
+      <ul class="focus-list">
         <li v-for="(f, i) in summary.reviewer_focus" :key="i">{{ f }}</li>
       </ul>
     </div>
@@ -26,41 +32,69 @@ defineProps<{
 </template>
 
 <style scoped>
-.review-summary {
-  margin-bottom: 20px;
+.summary-card {
+  margin-bottom: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
 }
-h3 {
-  margin: 0 0 8px;
-  font-size: 16px;
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--teal);
+  margin-bottom: 14px;
 }
+.card-icon { font-size: 12px; }
+
 .overview {
-  margin: 0 0 12px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #333;
-}
-.modules, .focus {
-  margin-bottom: 8px;
+  margin: 0 0 16px;
   font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-primary);
 }
-.section-label {
-  color: #666;
+
+.summary-row {
+  margin-bottom: 10px;
+}
+.row-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-right: 10px;
+}
+
+.tag-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
 }
 .tag {
-  display: inline-block;
-  background: #e8f0fe;
-  color: #4a90d9;
+  font-size: 10px;
   padding: 2px 8px;
-  border-radius: 4px;
-  margin-right: 6px;
-  font-size: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
 }
-.focus ul {
+
+.focus-list {
   margin: 4px 0 0;
-  padding-left: 20px;
+  padding-left: 18px;
+  list-style: square;
 }
-.focus li {
-  margin-bottom: 2px;
-  color: #555;
+.focus-list li {
+  margin-bottom: 3px;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
+.focus-list li::marker { color: var(--accent); }
 </style>
