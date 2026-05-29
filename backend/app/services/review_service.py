@@ -1,15 +1,17 @@
 import uuid
 
 from app.core.logger import logger
+from app.providers.github import GitHubProvider
 from app.providers.mock_github import MockGitHubProvider
 from app.schemas.review import CreateReviewTaskRequest, CreateReviewTaskResponse, ReviewReport
 from app.schemas.common import TaskStatus
 from app.storage.memory_store import MemoryTaskStore
 from app.workflows.review_graph import build_review_graph
 
-# 模块级单例：第 2 天 Demo 模式关闭时，需要替换 provider 注入
+# 模块级单例：demo 模式共用一份编译好的 graph
 store = MemoryTaskStore()
 demo_graph = build_review_graph(MockGitHubProvider())
+
 
 
 async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTaskResponse:
@@ -17,7 +19,7 @@ async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTa
 
     流程：
     1. 生成唯一 task_id
-    2. 根据 mode 选择 Provider（demo 用 Mock，github 待接入）
+    2. 根据 mode 选择 Provider（demo 用 Mock，github 用真实 API）
     3. 异步执行工作流（parse → fetch → review → assemble）
     4. 将结果存入 MemoryTaskStore
     5. 返回 task_id 和状态
@@ -25,60 +27,71 @@ async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTa
     task_id = f"task_{uuid.uuid4().hex[:24]}"
     logger.info("开始执行 Review 工作流 | task_id={} url={} mode={}", task_id, request.url, request.mode)
 
-    # 模式路由：github 模式暂未接入真实 GitHub Provider
+    # 根据模式构建对应的 graph，github 模式需管理 Provider 生命周期
+    github_provider = None
     if request.mode == "github":
-        logger.warning("GitHub 模式暂未接入 | task_id={}", task_id)
-        error_report = ReviewReport(
-            task_id=task_id,
-            status=TaskStatus.failed,
-            error_message="GitHub mode is not yet available. Please use demo mode or wait for Day 2 integration.",
-        )
-        store.save(error_report)
-        return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.failed)
+        github_provider = GitHubProvider()
+        try:
+            review_graph = build_review_graph(github_provider)
+        except Exception as e:
+            logger.error("GitHub Provider 初始化失败 | task_id={} error={}", task_id, str(e))
+            await github_provider.close()
+            error_report = ReviewReport(
+                task_id=task_id,
+                status=TaskStatus.failed,
+                error_message=f"Failed to initialize GitHub client: {e}",
+            )
+            store.save(error_report)
+            return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.failed)
+    else:
+        review_graph = demo_graph
 
-    review_graph = demo_graph
-
-    # 工作流初始状态：只需 task_id, url, mode
+    # 工作流初始状态
     state = {
         "task_id": task_id,
         "url": request.url,
         "mode": request.mode,
     }
 
-    logger.debug("调用 LangGraph 工作流 | task_id={}", task_id)
-    result = await review_graph.ainvoke(state)
-    logger.debug("LangGraph 工作流返回 | task_id={} has_error={} has_report={}",
-                 task_id,
-                 "error_message" in result and result["error_message"] is not None,
-                 "report" in result and result["report"] is not None)
+    try:
+        logger.debug("调用 LangGraph 工作流 | task_id={}", task_id)
+        result = await review_graph.ainvoke(state)
+        logger.debug("LangGraph 工作流返回 | task_id={} has_error={} has_report={}",
+                     task_id,
+                     "error_message" in result and result["error_message"] is not None,
+                     "report" in result and result["report"] is not None)
 
-    # 工作流中任意节点设置了 error_message 即视为失败
-    if result.get("error_message"):
-        logger.error("Review 工作流执行失败 | task_id={} error={}", task_id, result["error_message"])
-        error_report = ReviewReport(
-            task_id=task_id,
-            status=TaskStatus.failed,
-            error_message=result["error_message"],
-        )
-        store.save(error_report)
-        return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.failed)
+        # 工作流中任意节点设置了 error_message 即视为失败
+        if result.get("error_message"):
+            logger.error("Review 工作流执行失败 | task_id={} error={}", task_id, result["error_message"])
+            error_report = ReviewReport(
+                task_id=task_id,
+                status=TaskStatus.failed,
+                error_message=result["error_message"],
+            )
+            store.save(error_report)
+            return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.failed)
 
-    # 安全守卫：如果工作流异常既无错误也无 report，返回失败
-    report = result.get("report")
-    if report is None:
-        logger.error("Review 工作流未产出报告 | task_id={}", task_id)
-        error_report = ReviewReport(
-            task_id=task_id,
-            status=TaskStatus.failed,
-            error_message="Workflow completed but produced no report.",
-        )
-        store.save(error_report)
-        return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.failed)
+        # 安全守卫：如果工作流异常既无错误也无 report，返回失败
+        report = result.get("report")
+        if report is None:
+            logger.error("Review 工作流未产出报告 | task_id={}", task_id)
+            error_report = ReviewReport(
+                task_id=task_id,
+                status=TaskStatus.failed,
+                error_message="Workflow completed but produced no report.",
+            )
+            store.save(error_report)
+            return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.failed)
 
-    store.save(report)
-    logger.info("Review 工作流执行成功 | task_id={} findings_count={} suggestions_count={}",
-                task_id, len(report.findings), len(report.suggestions))
-    return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.succeeded)
+        store.save(report)
+        logger.info("Review 工作流执行成功 | task_id={} findings_count={} suggestions_count={}",
+                    task_id, len(report.findings), len(report.suggestions))
+        return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.succeeded)
+    finally:
+        if github_provider is not None:
+            await github_provider.close()
+            logger.debug("GitHub Provider 已关闭 | task_id={}", task_id)
 
 
 async def get_review_result(task_id: str) -> ReviewReport | None:
