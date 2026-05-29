@@ -1,0 +1,286 @@
+{
+  "project": "CodePilot Review",
+  "branchName": "ralph/ai-pr-review-assistant",
+  "description": "AI-assisted GitHub PR review tool that fetches PR changes, summarizes impact, detects risky code, and generates actionable review suggestions.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create app foundation",
+      "description": "As a developer, I want a maintainable FastAPI and frontend project foundation so that the PR review assistant can be built and demonstrated reliably.",
+      "acceptanceCriteria": [
+        "Create a backend service using FastAPI with health check and version endpoints.",
+        "Create a frontend app shell with a single PR review workspace page.",
+        "Define environment configuration for GitHub token, model provider, model name, and request timeout.",
+        "Add typed request and response schemas for review tasks using Pydantic.",
+        "Add README setup instructions for local development.",
+        "Backend tests pass.",
+        "Frontend typecheck passes."
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Parse GitHub PR input",
+      "description": "As a user, I want to paste a GitHub PR URL so that the system can identify the repository, owner, and PR number automatically.",
+      "acceptanceCriteria": [
+        "Accept GitHub PR URLs in the format https://github.com/{owner}/{repo}/pull/{number}.",
+        "Reject invalid URLs with a clear validation message.",
+        "Extract owner, repo, and pull request number into a typed internal model.",
+        "Show parsed PR metadata preview before starting analysis.",
+        "Backend tests pass.",
+        "Frontend typecheck passes."
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Fetch PR metadata and diff",
+      "description": "As a user, I want the assistant to retrieve PR changes from GitHub so that I do not need to copy code manually.",
+      "acceptanceCriteria": [
+        "Use GitHub API to fetch PR title, author, base branch, head branch, changed files, additions, deletions, and commit count.",
+        "Fetch unified diffs for changed files and preserve file paths and line ranges.",
+        "Handle private repositories when a valid GitHub token is configured.",
+        "Return actionable errors for missing token, unauthorized access, rate limits, and not found PRs.",
+        "Add a mock GitHub provider for demo and tests.",
+        "Backend tests pass."
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Collect relevant code context",
+      "description": "As a reviewer, I want the assistant to inspect context around changed code so that review suggestions are grounded beyond the raw diff.",
+      "acceptanceCriteria": [
+        "Fetch current file content for changed files when available.",
+        "Extract nearby function or class context around modified hunks using language-aware heuristics where possible.",
+        "Identify likely related files such as tests, schemas, API routes, and configuration files by path patterns.",
+        "Limit context size with deterministic token or character budgets per file.",
+        "Include context source labels so generated findings can cite evidence.",
+        "Backend tests pass."
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Generate PR change summary",
+      "description": "As a reviewer, I want a concise PR summary so that I can quickly understand what changed and where to focus.",
+      "acceptanceCriteria": [
+        "Generate a summary covering business intent, key changed modules, and notable implementation details.",
+        "Group changed files by category such as backend, frontend, tests, config, docs, or unknown.",
+        "Return structured JSON containing overview, file groups, and reviewer focus areas.",
+        "When model output is malformed, retry once and then return a graceful fallback summary.",
+        "Backend tests pass."
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Detect risky code changes",
+      "description": "As a reviewer, I want risky code changes to be highlighted so that I can prioritize correctness, security, and maintainability issues.",
+      "acceptanceCriteria": [
+        "Analyze changed code across risk categories: correctness, security, performance, compatibility, observability, data handling, and missing tests.",
+        "Assign each finding a severity of critical, high, medium, or low.",
+        "Each finding includes file path, line reference when available, evidence, reasoning, and confidence score.",
+        "Suppress low-confidence findings below the configured threshold from the default view.",
+        "Return an empty findings list with explanation when no meaningful risks are detected.",
+        "Backend tests pass."
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Generate actionable review suggestions",
+      "description": "As a developer, I want review comments that explain the problem and suggest a fix so that I can act on them quickly.",
+      "acceptanceCriteria": [
+        "Generate review suggestions tied to specific findings and changed files.",
+        "Each suggestion includes comment text, rationale, suggested fix, and whether it should block merge.",
+        "Avoid generic comments that do not cite code evidence.",
+        "Provide test suggestions for changed behavior and identified risk areas.",
+        "Support Chinese output by default with an option-ready response field for future language switching.",
+        "Backend tests pass."
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Build LangGraph review workflow",
+      "description": "As a developer, I want the review analysis split into observable workflow nodes so that accuracy, latency, and failures can be managed independently.",
+      "acceptanceCriteria": [
+        "Implement workflow nodes for input validation, PR fetch, context collection, summary generation, risk analysis, suggestion generation, and final report assembly.",
+        "Persist task status in memory or lightweight storage with states: queued, running, succeeded, failed.",
+        "Expose structured node progress events for the frontend.",
+        "Allow failed model nodes to return partial results when earlier steps succeeded.",
+        "Backend tests pass."
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Stream review progress",
+      "description": "As a user, I want to see review progress in real time so that the tool feels responsive during longer PR analysis.",
+      "acceptanceCriteria": [
+        "Expose a review task creation endpoint that returns a task ID.",
+        "Expose an SSE or WebSocket endpoint that streams node progress, warnings, partial summary, partial findings, and completion events.",
+        "Frontend displays current analysis stage and progressively renders available results.",
+        "Connection loss can be recovered by reloading task status with the task ID.",
+        "Backend tests pass.",
+        "Frontend typecheck passes."
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Create PR review dashboard",
+      "description": "As a reviewer, I want a focused dashboard for summary, risks, and suggestions so that I can review findings efficiently.",
+      "acceptanceCriteria": [
+        "Create an input panel for GitHub PR URL and analysis start action.",
+        "Show PR metadata, changed file counts, additions, deletions, and branch information.",
+        "Show summary, risk findings, review suggestions, and test recommendations in separate scan-friendly sections.",
+        "Allow filtering findings by severity and category.",
+        "Display file path and line reference for each finding when available.",
+        "Frontend typecheck passes."
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add simulated publishing of review comments",
+      "description": "As a demo user, I want to preview comments that would be posted to GitHub so that the tool can demonstrate one-click review without requiring write permissions.",
+      "acceptanceCriteria": [
+        "Provide a simulated publish action that marks selected suggestions as prepared review comments.",
+        "Render a GitHub-style preview containing file path, line reference, and comment body.",
+        "Do not call GitHub write APIs in simulation mode.",
+        "Design the provider interface so real GitHub review submission can be added later.",
+        "Backend tests pass.",
+        "Frontend typecheck passes."
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Add accuracy controls and guardrails",
+      "description": "As a reviewer, I want the assistant to control hallucination and noisy findings so that I can trust the output.",
+      "acceptanceCriteria": [
+        "Require every high or critical finding to include concrete code evidence from diff or fetched context.",
+        "Add confidence scoring and a configurable minimum confidence threshold.",
+        "Add a final self-check step that removes duplicate, unsupported, or overly broad findings.",
+        "Show a disclaimer when analysis is partial due to missing context, API limits, or model failure.",
+        "Include prompt fixtures or golden examples for regression testing major output shapes.",
+        "Backend tests pass."
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Document model and context strategy",
+      "description": "As an evaluator, I want to understand model selection, context acquisition, and extension direction so that the project design can be judged beyond the demo.",
+      "acceptanceCriteria": [
+        "Document recommended model strategy: fast model for summary and stronger model for risk analysis.",
+        "Document context strategy using PR diff, changed file content, nearby symbols, related tests, and repository metadata.",
+        "Document false positive and false negative control methods.",
+        "Document latency optimizations such as file-level batching, streaming, and partial results.",
+        "Document future extensions for GitLab, Gitee, organization rules, CI integration, and inline GitHub review submission.",
+        "Docs are linked from README."
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Create competition-ready README",
+      "description": "As an evaluator, I want a complete README so that I can understand, run, and assess the submitted work without extra explanation.",
+      "acceptanceCriteria": [
+        "README states the selected topic direction and explains why the work fits AI PR Review assistant requirements.",
+        "README includes product overview, target users, core features, architecture diagram or architecture section, and usage flow.",
+        "README includes local setup, environment variables, dependency installation, backend startup, frontend startup, and demo mode instructions.",
+        "README lists all third-party libraries, frameworks, model providers, and external APIs used by the project.",
+        "README clearly identifies original implementation work and cites any reused code, templates, or references.",
+        "README links to model and context strategy documentation.",
+        "Backend tests pass.",
+        "Frontend typecheck passes."
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Define PR and commit delivery workflow",
+      "description": "As a participant, I want the repository workflow to satisfy the competition delivery rules so that the work is considered valid.",
+      "acceptanceCriteria": [
+        "Create a delivery checklist documenting the 3-day schedule: day 1 repository creation and topic submission, day 2 iterative PR and commit delivery, day 3 final code, README, and demo video submission.",
+        "Document that all commits must occur within the official start and deadline window.",
+        "Document that features should be submitted through PRs rather than one final bulk commit.",
+        "Document that each PR should implement or modify one focused feature.",
+        "Document the required PR description template: title, feature description, implementation approach, and testing method.",
+        "Document that the main branch must remain runnable after PR merge.",
+        "Backend tests pass.",
+        "Frontend typecheck passes."
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Add demo presentation materials",
+      "description": "As an evaluator, I want a clear demo video and presentation outline so that I can quickly understand the product functions and effects.",
+      "acceptanceCriteria": [
+        "Create a demo script covering problem background, target users, product workflow, PR analysis result, risk finding detail, simulated review comment publishing, and extension plan.",
+        "Create a demo checklist to ensure the video shows a complete successful PR analysis from input URL to final report.",
+        "Prepare sample PR data or mock data that can be analyzed reliably during recording.",
+        "Demo materials explain the scoring focus: product completeness and innovation, development quality, and presentation clarity.",
+        "README links to demo video location or placeholder before final submission.",
+        "Backend tests pass.",
+        "Frontend typecheck passes."
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Add final validity and scoring checklist",
+      "description": "As a participant, I want a final submission checklist so that avoidable invalidation risks are caught before the deadline.",
+      "acceptanceCriteria": [
+        "Checklist verifies the work fits the selected topic and has no plagiarism risk.",
+        "Checklist verifies PR descriptions are not empty and match actual code changes.",
+        "Checklist verifies third-party dependencies are declared in README.",
+        "Checklist verifies any reused past code is cited in PR descriptions or README.",
+        "Checklist verifies repository is public or otherwise accessible to evaluators.",
+        "Checklist verifies final main branch can run and demonstrates the expected product effect.",
+        "Checklist verifies final submission includes public code repository, README, and demo video.",
+        "Backend tests pass.",
+        "Frontend typecheck passes."
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
