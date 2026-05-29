@@ -3,7 +3,7 @@ import pytest
 
 from app.providers.mock_github import MockGitHubProvider
 from app.schemas.common import TaskStatus
-from app.workflows.review_graph import build_review_graph
+from app.workflows.review_graph import build_demo_graph
 
 
 @pytest.fixture
@@ -14,8 +14,8 @@ def provider():
 
 @pytest.fixture
 def graph(provider):
-    """构建编译后的工作流"""
-    return build_review_graph(provider)
+    """构建编译后的 Demo 工作流"""
+    return build_demo_graph(provider)
 
 
 @pytest.mark.asyncio
