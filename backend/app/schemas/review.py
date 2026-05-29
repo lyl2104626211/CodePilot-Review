@@ -64,4 +64,5 @@ class ReviewReport(BaseModel):
     findings: list[RiskFinding] = []
     suggestions: list[ReviewSuggestion] = []
     test_recommendations: list[str] = []
+    warnings: list[str] = []
     error_message: str | None = None

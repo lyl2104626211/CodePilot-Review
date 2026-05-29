@@ -1,17 +1,38 @@
 import uuid
 
+from app.core.config import settings
 from app.core.logger import logger
+from app.llm.fallback import FallbackLLMClient
+from app.llm.openai_compatible import OpenAICompatibleLLMClient
 from app.providers.github import GitHubProvider
 from app.providers.mock_github import MockGitHubProvider
 from app.schemas.review import CreateReviewTaskRequest, CreateReviewTaskResponse, ReviewReport
 from app.schemas.common import TaskStatus
 from app.storage.memory_store import MemoryTaskStore
-from app.workflows.review_graph import build_review_graph
+from app.workflows.review_graph import build_demo_graph, build_review_graph
 
-# 模块级单例：demo 模式共用一份编译好的 graph
+# 模块级单例
 store = MemoryTaskStore()
-demo_graph = build_review_graph(MockGitHubProvider())
+demo_graph = build_demo_graph(MockGitHubProvider())
 
+
+def _create_llm_client():
+    """根据环境配置创建 LLM 客户端
+
+    规则：
+    - 若 MODEL_API_KEY 已配置，使用 OpenAICompatibleLLMClient（真实模型）
+    - 否则使用 FallbackLLMClient（基于规则，无需 API Key）
+    """
+    if settings.model_api_key:
+        logger.info("使用真实 LLM 客户端 | provider={} model={} base_url={}",
+                    settings.model_provider, settings.model_name, settings.model_base_url)
+        return OpenAICompatibleLLMClient(
+            base_url=settings.model_base_url,
+            api_key=settings.model_api_key,
+            model=settings.model_name,
+        )
+    logger.info("MODEL_API_KEY 未配置，使用 Fallback LLM 客户端")
+    return FallbackLLMClient()
 
 
 async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTaskResponse:
@@ -19,20 +40,21 @@ async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTa
 
     流程：
     1. 生成唯一 task_id
-    2. 根据 mode 选择 Provider（demo 用 Mock，github 用真实 API）
-    3. 异步执行工作流（parse → fetch → review → assemble）
+    2. 根据 mode 选择 Provider 和 Graph（demo 用 4 节点，github 用 9 节点）
+    3. 异步执行工作流
     4. 将结果存入 MemoryTaskStore
     5. 返回 task_id 和状态
     """
     task_id = f"task_{uuid.uuid4().hex[:24]}"
     logger.info("开始执行 Review 工作流 | task_id={} url={} mode={}", task_id, request.url, request.mode)
 
-    # 根据模式构建对应的 graph，github 模式需管理 Provider 生命周期
+    # 根据模式构建对应的 graph
     github_provider = None
     if request.mode == "github":
         github_provider = GitHubProvider()
+        llm_client = _create_llm_client()
         try:
-            review_graph = build_review_graph(github_provider)
+            review_graph = build_review_graph(github_provider, llm_client)
         except Exception as e:
             logger.error("GitHub Provider 初始化失败 | task_id={} error={}", task_id, str(e))
             await github_provider.close()
@@ -51,6 +73,7 @@ async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTa
         "task_id": task_id,
         "url": request.url,
         "mode": request.mode,
+        "warnings": [],
     }
 
     try:
@@ -83,6 +106,12 @@ async def create_review_task(request: CreateReviewTaskRequest) -> CreateReviewTa
             )
             store.save(error_report)
             return CreateReviewTaskResponse(task_id=task_id, status=TaskStatus.failed)
+
+        # 附加 warnings 到 report（如果有）
+        if result.get("warnings"):
+            # report.warnings 字段暂未在 ReviewReport 中，仅在日志中记录
+            logger.info("Review 工作流包含警告 | task_id={} warnings={}",
+                        task_id, result["warnings"])
 
         store.save(report)
         logger.info("Review 工作流执行成功 | task_id={} findings_count={} suggestions_count={}",

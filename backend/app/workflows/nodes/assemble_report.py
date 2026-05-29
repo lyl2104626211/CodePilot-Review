@@ -21,9 +21,10 @@ def assemble_report_node(state: ReviewGraphState) -> ReviewGraphState:
         status=TaskStatus.succeeded,
         pr=state["pr_snapshot"],
         summary=state["summary"],
-        findings=state["findings"],
-        suggestions=state["suggestions"],
-        test_recommendations=state["test_recommendations"],
+        findings=state.get("findings", []),
+        suggestions=state.get("suggestions", []),
+        test_recommendations=state.get("test_recommendations", []),
+        warnings=state.get("warnings", []),
     )
 
     logger.info("[工作流] assemble_report 节点完成，报告已生成 | task_id={}", state.get("task_id"))

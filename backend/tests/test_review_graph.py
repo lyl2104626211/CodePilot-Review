@@ -1,9 +1,10 @@
 """LangGraph Review 工作流直接测试"""
 import pytest
 
+from app.llm.fallback import FallbackLLMClient
 from app.providers.mock_github import MockGitHubProvider
 from app.schemas.common import TaskStatus
-from app.workflows.review_graph import build_review_graph
+from app.workflows.review_graph import build_demo_graph, build_review_graph
 
 
 @pytest.fixture
@@ -14,8 +15,15 @@ def provider():
 
 @pytest.fixture
 def graph(provider):
-    """构建编译后的工作流"""
-    return build_review_graph(provider)
+    """构建编译后的 Demo 工作流（4 节点）"""
+    return build_demo_graph(provider)
+
+
+@pytest.fixture
+def full_graph(provider):
+    """构建编译后的完整工作流（9 节点）"""
+    llm = FallbackLLMClient()
+    return build_review_graph(provider, llm)
 
 
 @pytest.mark.asyncio
@@ -88,3 +96,57 @@ async def test_workflow_includes_pr_metadata(graph):
     assert pr.changed_files == 3
     assert pr.additions == 128
     assert pr.deletions == 24
+
+
+@pytest.mark.asyncio
+async def test_full_workflow_succeeds(full_graph):
+    """验证 9 节点完整工作流产出包含 review_context、summary、findings、suggestions、warnings 的报告"""
+    state = {
+        "task_id": "test_task_full",
+        "url": "https://github.com/acme/codepilot/pull/12",
+        "mode": "github",
+    }
+    result = await full_graph.ainvoke(state)
+
+    assert "error_message" not in result or result["error_message"] is None
+    report = result["report"]
+    assert report.status == TaskStatus.succeeded
+    assert report.pr is not None
+
+    # 9 节点流程应有 summary、findings、suggestions、test_recommendations
+    assert report.summary is not None
+    assert len(report.summary.overview) > 0
+    assert len(report.summary.changed_modules) > 0
+    assert isinstance(report.findings, list)
+    assert isinstance(report.suggestions, list)
+    assert isinstance(report.test_recommendations, list)
+
+    # review_context 应存在于 state 中
+    assert "review_context" in result
+    review_ctx = result["review_context"]
+    assert review_ctx is not None
+    assert len(review_ctx.files) > 0
+
+    # 关键字段都应非空
+    for f in report.findings:
+        assert f.id
+        assert f.severity.value
+        assert f.category.value
+        assert f.title
+
+    for s in report.suggestions:
+        assert s.id
+        assert s.comment
+
+
+@pytest.mark.asyncio
+async def test_full_workflow_invalid_url_fails(full_graph):
+    """验证 9 节点工作流在非法 URL 时不产出 succeeded 报告"""
+    state = {
+        "task_id": "test_task_full_invalid",
+        "url": "not-a-url",
+        "mode": "github",
+    }
+    result = await full_graph.ainvoke(state)
+    assert result.get("error_message") is not None
+    assert "report" not in result or result["report"] is None
