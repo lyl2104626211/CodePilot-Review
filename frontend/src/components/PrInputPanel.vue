@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+import type { ReviewMode } from '../types/review'
+
 defineProps<{
   loading: boolean
   error?: string
+  mode?: ReviewMode
 }>()
 
 const emit = defineEmits<{
@@ -42,7 +45,8 @@ function handleSubmit() {
       </button>
     </div>
 
-    <div class="demo-hint">当前为 Demo 模式，使用 Mock 数据演示</div>
+    <div class="demo-hint" v-if="mode === 'demo'">Demo 模式 — 使用 Mock 数据演示</div>
+    <div class="demo-hint" v-else-if="mode === 'github'">GitHub 模式 — 真实 PR 数据 + AI 分析</div>
 
     <p v-if="localError || error" class="error-msg">{{ localError || error }}</p>
   </div>

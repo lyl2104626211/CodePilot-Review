@@ -29,6 +29,7 @@ async function handleSubmit(url: string) {
       error.value = result.error_message || '分析失败，请重试'
     } else {
       report.value = result
+      filteredFindings.value = result.findings ?? []
     }
   } catch (e: any) {
     error.value = e.message || '请求失败'
@@ -40,7 +41,7 @@ async function handleSubmit(url: string) {
 
 <template>
   <div class="app-container">
-    <PrInputPanel :loading="loading" :error="error" @submit="handleSubmit" />
+    <PrInputPanel :loading="loading" :error="error" :mode="mode" @submit="handleSubmit" />
 
     <ModeSelector v-model:mode="mode" :loading="loading" />
 
@@ -60,7 +61,7 @@ async function handleSubmit(url: string) {
       @update:filtered="filteredFindings = $event"
     />
 
-    <RiskList :findings="filteredFindings.length ? filteredFindings : (report?.findings ?? [])" />
+    <RiskList :findings="filteredFindings" />
 
     <SuggestionList
       :suggestions="report?.suggestions ?? []"
