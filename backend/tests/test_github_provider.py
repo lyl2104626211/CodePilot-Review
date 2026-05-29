@@ -24,7 +24,13 @@ MOCK_PR_DATA = {
             "owner": {"login": "acme"},
         },
     },
-    "base": {"ref": "main"},
+    "base": {
+        "ref": "main",
+        "repo": {
+            "name": "codepilot",
+            "owner": {"login": "acme"},
+        },
+    },
     "changed_files": 3,
     "additions": 128,
     "deletions": 24,

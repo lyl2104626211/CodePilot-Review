@@ -94,7 +94,11 @@ class GitHubProvider:
         files_data: list[dict],
         commits_data: list[dict],
     ) -> PullRequestSnapshot:
-        """将 GitHub API JSON 转换为内部 PullRequestSnapshot 模型"""
+        """将 GitHub API JSON 转换为内部 PullRequestSnapshot 模型
+
+        owner/repo 取自 base.repo（目标仓库），而非 head.repo。
+        这样 fork PR 也能正确返回目标仓库而非 fork 仓库。
+        """
         files = [
             PullRequestFile(
                 path=f.get("filename", ""),
@@ -113,9 +117,13 @@ class GitHubProvider:
         base = pr_data.get("base", {})
         user = pr_data.get("user", {})
 
+        # 使用 base.repo 而非 head.repo：fork PR 时 head 指向 fork 仓库，
+        # base 才是 URL 中的目标仓库
+        base_repo = base.get("repo", {})
+
         return PullRequestSnapshot(
-            owner=head.get("repo", {}).get("owner", {}).get("login", ""),
-            repo=head.get("repo", {}).get("name", ""),
+            owner=base_repo.get("owner", {}).get("login", ""),
+            repo=base_repo.get("name", ""),
             number=pr_data.get("number", 0),
             title=pr_data.get("title", ""),
             author=user.get("login", "unknown"),
