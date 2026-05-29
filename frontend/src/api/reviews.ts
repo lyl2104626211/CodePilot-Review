@@ -1,4 +1,4 @@
-import type { CreateReviewTaskResponse, ReviewReport } from '../types/review'
+import type { CreateReviewTaskResponse, ReviewMode, ReviewReport } from '../types/review'
 
 async function readError(response: Response): Promise<string> {
   try {
@@ -9,11 +9,11 @@ async function readError(response: Response): Promise<string> {
   }
 }
 
-export async function createReviewTask(url: string): Promise<CreateReviewTaskResponse> {
+export async function createReviewTask(url: string, mode: ReviewMode = 'demo'): Promise<CreateReviewTaskResponse> {
   const response = await fetch('/api/reviews', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, mode: 'demo' }),
+    body: JSON.stringify({ url, mode }),
   })
   if (!response.ok) throw new Error(await readError(response))
   return response.json()

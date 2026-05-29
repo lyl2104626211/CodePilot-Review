@@ -1,23 +1,29 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { ReviewReport } from './types/review'
+import type { ReviewMode, ReviewReport, RiskFinding } from './types/review'
 import { createReviewTask, getReviewReport } from './api/reviews'
 import PrInputPanel from './components/PrInputPanel.vue'
 import PrMetaPanel from './components/PrMetaPanel.vue'
 import ReviewSummary from './components/ReviewSummary.vue'
 import RiskList from './components/RiskList.vue'
 import SuggestionList from './components/SuggestionList.vue'
+import ModeSelector from './components/ModeSelector.vue'
+import ProgressTimeline from './components/ProgressTimeline.vue'
+import FindingFilters from './components/FindingFilters.vue'
 
+const mode = ref<ReviewMode>('demo')
 const loading = ref(false)
 const error = ref('')
 const report = ref<ReviewReport | null>(null)
+const filteredFindings = ref<RiskFinding[]>([])
 
 async function handleSubmit(url: string) {
   loading.value = true
   error.value = ''
   report.value = null
+  filteredFindings.value = []
   try {
-    const { task_id } = await createReviewTask(url)
+    const { task_id } = await createReviewTask(url, mode.value)
     const result = await getReviewReport(task_id)
     if (result.status === 'failed') {
       error.value = result.error_message || '分析失败，请重试'
@@ -36,11 +42,25 @@ async function handleSubmit(url: string) {
   <div class="app-container">
     <PrInputPanel :loading="loading" :error="error" @submit="handleSubmit" />
 
+    <ModeSelector v-model:mode="mode" :loading="loading" />
+
+    <ProgressTimeline
+      :loading="loading"
+      :status="report?.status"
+      :warnings="report?.warnings"
+    />
+
     <PrMetaPanel :pr="report?.pr" />
 
     <ReviewSummary :summary="report?.summary" />
 
-    <RiskList :findings="report?.findings ?? []" />
+    <FindingFilters
+      v-if="report?.findings"
+      :findings="report.findings"
+      @update:filtered="filteredFindings = $event"
+    />
+
+    <RiskList :findings="filteredFindings.length ? filteredFindings : (report?.findings ?? [])" />
 
     <SuggestionList
       :suggestions="report?.suggestions ?? []"
