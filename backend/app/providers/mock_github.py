@@ -1,3 +1,4 @@
+from app.core.logger import logger
 from app.schemas.github import ParsedPullRequest, PullRequestFile, PullRequestSnapshot
 
 
@@ -9,6 +10,7 @@ class MockGitHubProvider:
 
     async def get_pull_request(self, ref: ParsedPullRequest) -> PullRequestSnapshot:
         """返回一份固定的 Mock PR 快照，方便第 1 天演示和测试"""
+        logger.debug("Mock Provider 获取 PR 数据 | owner={} repo={} number={}", ref.owner, ref.repo, ref.number)
         return PullRequestSnapshot(
             owner=ref.owner,
             repo=ref.repo,

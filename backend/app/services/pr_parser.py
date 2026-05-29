@@ -1,6 +1,7 @@
 import re
 from urllib.parse import urlparse
 
+from app.core.logger import logger
 from app.schemas.github import ParsedPullRequest
 
 # 匹配 GitHub PR URL 路径：/owner/repo/pull/number
@@ -24,15 +25,18 @@ def parse_github_pr_url(url: str) -> ParsedPullRequest:
     Raises:
         PRParseError: URL 格式不合法时抛出
     """
+    logger.debug("开始解析 PR URL | url={}", url)
     parsed = urlparse(url)
 
     # 只允许 GitHub 域名
     if parsed.hostname != "github.com":
+        logger.warning("非 GitHub 域名被拒绝 | hostname={} url={}", parsed.hostname, url)
         raise PRParseError("Only GitHub pull request URLs are supported.")
 
     # 正则匹配 /owner/repo/pull/number 格式
     match = GITHUB_PR_PATTERN.match(parsed.path)
     if not match:
+        logger.warning("PR URL 路径格式不匹配 | path={} url={}", parsed.path, url)
         raise PRParseError(
             "Invalid GitHub PR URL. Expected format: https://github.com/{owner}/{repo}/pull/{number}"
         )
@@ -45,11 +49,14 @@ def parse_github_pr_url(url: str) -> ParsedPullRequest:
 
     # 安全守卫：理论上正则 \d+ 不会匹配到 0 或负数，但保留此检查防止极端情况
     if number <= 0:
+        logger.error("PR 编号异常为非正数 | number={} url={}", number, url)
         raise PRParseError("Pull request number must be a positive integer.")
 
-    return ParsedPullRequest(
+    result = ParsedPullRequest(
         owner=owner,
         repo=repo,
         number=number,
         url=url,  # type: ignore[arg-type]  # Pydantic 自动将 str 转为 HttpUrl
     )
+    logger.debug("PR URL 解析完成 | owner={} repo={} number={}", owner, repo, number)
+    return result

@@ -1,3 +1,4 @@
+from app.core.logger import logger
 from app.schemas.common import RiskCategory, RiskSeverity
 from app.schemas.review import ReviewSuggestion, ReviewSummary, RiskFinding
 from app.workflows.review_state import ReviewGraphState
@@ -10,7 +11,10 @@ def generate_mock_review_node(state: ReviewGraphState) -> ReviewGraphState:
     第 2 天拆分为 LLM 驱动的总结、风险分析、建议生成节点。
     """
     if state.get("error_message"):
+        logger.debug("[工作流] generate_mock_review 节点跳过（前置错误） | task_id={}", state.get("task_id"))
         return state
+
+    logger.debug("[工作流] generate_mock_review 节点开始 | task_id={}", state.get("task_id"))
 
     state["summary"] = ReviewSummary(
         overview="本 PR 新增了 Review 任务创建接口和基础任务状态管理。",
@@ -50,4 +54,6 @@ def generate_mock_review_node(state: ReviewGraphState) -> ReviewGraphState:
         "增加 Mock Provider 返回固定 PR 元数据的测试。",
     ]
 
+    logger.debug("[工作流] generate_mock_review 节点完成 | task_id={} findings={} suggestions={}",
+                state.get("task_id"), len(state["findings"]), len(state["suggestions"]))
     return state

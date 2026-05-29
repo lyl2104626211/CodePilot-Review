@@ -3,10 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import health, reviews
 from app.core.config import settings
+from app.core.logger import logger
 
 
 def create_app() -> FastAPI:
     """创建并配置 FastAPI 应用实例"""
+    logger.info(
+        "正在创建 FastAPI 应用 | name={} version={} env={} demo_mode={}",
+        settings.app_name, settings.app_version, settings.app_env, settings.demo_mode,
+    )
     app = FastAPI(title=settings.app_name, version=settings.app_version)
 
     # CORS 中间件：允许前端跨域访问
