@@ -1,3 +1,5 @@
+export type ReviewMode = 'demo' | 'github'
+
 export interface ParsedPullRequest {
   owner: string
   repo: string
@@ -64,6 +66,7 @@ export interface ReviewReport {
   findings: RiskFinding[]
   suggestions: ReviewSuggestion[]
   test_recommendations: string[]
+  warnings: string[]
   error_message?: string
 }
 
