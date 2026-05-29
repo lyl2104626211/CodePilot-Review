@@ -1,105 +1,67 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { RiskFinding } from '../types/review'
 
-const props = defineProps<{
-  findings: RiskFinding[]
-}>()
+const props = defineProps<{ findings: RiskFinding[] }>()
 
-const emit = defineEmits<{
-  'update:filtered': [findings: RiskFinding[]]
-}>()
+const emit = defineEmits<{ 'update:filtered': [findings: RiskFinding[]] }>()
 
-const selectedSeverity = ref<string>('all')
-const showLowConfidence = ref(true)
+const sev = ref<string>('all')
+const lowConf = ref(true)
 
 const filtered = computed(() => {
-  let result = props.findings
-  if (selectedSeverity.value !== 'all') {
-    result = result.filter(f => f.severity === selectedSeverity.value)
-  }
-  if (!showLowConfidence.value) {
-    result = result.filter(f => f.confidence >= 0.5)
-  }
-  return result
+  let r = props.findings
+  if (sev.value !== 'all') r = r.filter(f => f.severity === sev.value)
+  if (!lowConf.value) r = r.filter(f => f.confidence >= 0.5)
+  return r
 })
 
-// 实时通知父组件
-import { watch } from 'vue'
-watch(filtered, (val) => emit('update:filtered', val), { immediate: true })
+watch(filtered, (v) => emit('update:filtered', v), { immediate: true })
 
-const severities = [
-  { value: 'all', label: '全部' },
-  { value: 'critical', label: '严重' },
-  { value: 'high', label: '高' },
-  { value: 'medium', label: '中' },
-  { value: 'low', label: '低' },
-]
+const filters = ['all', 'critical', 'high', 'medium', 'low']
 </script>
 
 <template>
-  <div v-if="findings.length > 0" class="finding-filters">
-    <div class="filter-row">
-      <span class="filter-label">严重程度：</span>
+  <div class="fbar">
+    <div class="fg">
+      <span class="fl">SEV</span>
       <button
-        v-for="s in severities"
-        :key="s.value"
-        :class="['filter-btn', { active: selectedSeverity === s.value }]"
-        @click="selectedSeverity = s.value"
-      >
-        {{ s.label }}
-      </button>
+        v-for="f in filters" :key="f"
+        :class="['ch', { on: sev === f }]"
+        @click="sev = f"
+      >{{ f === 'all' ? 'ALL' : f.toUpperCase() }}</button>
     </div>
-    <label class="confidence-toggle">
-      <input type="checkbox" v-model="showLowConfidence" />
-      显示低置信度 (&lt; 50%)
+    <label class="tog">
+      <input type="checkbox" v-model="lowConf" />
+      <span class="tt">LOW CONF</span>
     </label>
-    <span class="filter-count">显示 {{ filtered.length }} / {{ findings.length }} 条</span>
+    <span class="cnt">{{ filtered.length }} / {{ findings.length }}</span>
   </div>
 </template>
 
 <style scoped>
-.finding-filters {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-  padding: 8px 0;
+.fbar {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 8px; padding: 8px 0; flex-wrap: wrap;
 }
-.filter-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.fg { display: flex; align-items: center; gap: 4px; }
+.fl {
+  font-size: 8px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--text-muted); margin-right: 6px;
 }
-.filter-label {
-  font-size: 13px;
-  color: #666;
+.ch {
+  padding: 3px 10px; border: 1px solid var(--border);
+  border-radius: 2px; background: transparent; color: var(--text-muted);
+  cursor: pointer; font-family: var(--font-mono); font-size: 9px;
+  font-weight: 600; letter-spacing: 0.5px; transition: all 0.15s;
 }
-.filter-btn {
-  padding: 2px 10px;
-  border: 1px solid #d0d0d0;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 12px;
+.ch.on {
+  background: var(--bg-elevated); border-color: var(--border-hover);
+  color: var(--text-primary);
 }
-.filter-btn.active {
-  background: #4a90d9;
-  color: #fff;
-  border-color: #4a90d9;
-}
-.confidence-toggle {
-  font-size: 12px;
-  color: #666;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-}
-.filter-count {
-  font-size: 12px;
-  color: #999;
-  margin-left: auto;
-}
+.ch:hover:not(.on) { border-color: var(--border-hover); }
+.tog { display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }
+.tog input { accent-color: var(--accent); }
+.tt { font-size: 9px; font-weight: 600; letter-spacing: 0.5px; color: var(--text-muted); }
+.cnt { margin-left: auto; font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
 </style>

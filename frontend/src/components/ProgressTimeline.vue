@@ -1,109 +1,60 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
 const props = defineProps<{
   loading: boolean
   status?: string
   warnings?: string[]
 }>()
 
-const stages = [
-  { key: 'parse', label: 'URL 解析' },
-  { key: 'fetch', label: 'PR 获取' },
-  { key: 'context', label: '上下文收集' },
-  { key: 'summary', label: '总结生成' },
-  { key: 'risks', label: '风险识别' },
-  { key: 'suggestions', label: '建议生成' },
-  { key: 'guardrail', label: '质量检查' },
-  { key: 'assemble', label: '报告组装' },
-]
+const stages = ['PARSE', 'FETCH', 'CONTEXT', 'SUMMARY', 'RISKS', 'SUGGEST', 'GUARD', 'REPORT']
 
-const currentStageIndex = computed(() => {
-  if (!props.loading && props.status === 'succeeded') return stages.length
-  if (props.status === 'failed') return -1
-  if (props.loading) return 1 // 至少前两个阶段在跑
-  return 0
-})
+function ss(i: number): 'done' | 'active' | 'pending' | 'fail' {
+  if (props.status === 'failed' && !props.loading) return 'fail'
+  if (!props.loading && props.status === 'succeeded') return 'done'
+  if (props.loading && i === 0) return 'active'
+  return 'pending'
+}
 </script>
 
 <template>
-  <div v-if="loading || status === 'succeeded' || status === 'failed'" class="progress-timeline">
-    <h3>分析进度</h3>
-    <div class="timeline">
-      <div
-        v-for="(stage, i) in stages"
-        :key="stage.key"
-        :class="[
-          'stage',
-          { done: i < currentStageIndex, current: i === currentStageIndex && loading, failed: status === 'failed' && i === currentStageIndex }
-        ]"
-      >
+  <div v-if="loading || status === 'succeeded' || status === 'failed'" class="pbar">
+    <div class="stages">
+      <div v-for="(label, i) in stages" :key="label" :class="['st', ss(i)]">
         <span class="dot"></span>
-        <span class="label">{{ stage.label }}</span>
+        <span class="lbl">{{ label }}</span>
       </div>
     </div>
-    <div v-if="warnings && warnings.length" class="warnings-box">
-      <p v-for="(w, i) in warnings" :key="i" class="warning-item">{{ w }}</p>
+    <div v-if="warnings?.length" class="warn-list">
+      <p v-for="(w, i) in warnings" :key="i" class="wi">{{ w }}</p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.progress-timeline {
-  margin-bottom: 20px;
-  padding: 16px 20px;
-  background: #f9fafb;
-  border-radius: 8px;
+.pbar {
+  margin-bottom: 24px; padding: 14px 18px;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
-h3 {
-  margin: 0 0 12px;
-  font-size: 15px;
+.stages { display: flex; gap: 0; overflow-x: auto; }
+.st {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 9px; font-weight: 600; letter-spacing: 1px;
+  color: var(--text-muted); padding: 0 8px;
 }
-.timeline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.st:first-child { padding-left: 0; }
+.st::after { content: '\2192'; margin-left: 8px; color: var(--border); font-size: 10px; }
+.st:last-child::after { display: none; }
+.st.done { color: var(--success); }
+.st.done .dot { background: var(--success); }
+.st.active { color: var(--accent); }
+.st.active .dot { background: var(--accent); animation: pdot 1s infinite; }
+.st.fail { color: var(--danger); }
+.st.fail .dot { background: var(--danger); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-hover); flex-shrink: 0; }
+@keyframes pdot {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  50% { box-shadow: 0 0 0 4px transparent; }
 }
-.stage {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: #aaa;
-}
-.stage.done {
-  color: #5cb85c;
-}
-.stage.current {
-  color: #4a90d9;
-  font-weight: 600;
-}
-.stage.failed {
-  color: #d9534f;
-}
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ddd;
-}
-.stage.done .dot { background: #5cb85c; }
-.stage.current .dot { background: #4a90d9; animation: pulse 1s infinite; }
-.stage.failed .dot { background: #d9534f; }
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-.warnings-box {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background: #fff8e1;
-  border-radius: 6px;
-  border: 1px solid #ffe082;
-}
-.warning-item {
-  margin: 2px 0;
-  font-size: 12px;
-  color: #f0ad4e;
-}
+.warn-list { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.wi { margin: 2px 0; font-size: 11px; color: var(--warning); font-family: var(--font-mono); }
 </style>

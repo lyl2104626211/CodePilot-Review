@@ -1,73 +1,36 @@
 <script setup lang="ts">
 import type { ReviewMode } from '../types/review'
 
-defineProps<{
-  mode: ReviewMode
-  loading: boolean
-}>()
+defineProps<{ mode: ReviewMode; loading: boolean }>()
 
-const emit = defineEmits<{
-  'update:mode': [mode: ReviewMode]
-}>()
+const emit = defineEmits<{ 'update:mode': [mode: ReviewMode] }>()
 
-function setMode(mode: ReviewMode) {
-  emit('update:mode', mode)
-}
+function setMode(m: ReviewMode) { emit('update:mode', m) }
 </script>
 
 <template>
-  <div class="mode-selector">
-    <button
-      :class="['mode-btn', { active: mode === 'demo' }]"
-      :disabled="loading"
-      @click="setMode('demo')"
-    >
-      Demo 模式
-    </button>
-    <button
-      :class="['mode-btn', { active: mode === 'github' }]"
-      :disabled="loading"
-      @click="setMode('github')"
-    >
-      GitHub 模式
-    </button>
-    <span class="mode-hint" v-if="mode === 'github'">
-      公开仓库无需 Token，私有仓库需配置 GITHUB_TOKEN
-    </span>
-    <span class="mode-hint" v-else>
-      使用 Mock 数据演示
-    </span>
+  <div class="mode-switch">
+    <button :class="['mo', { on: mode === 'demo' }]" :disabled="loading" @click="setMode('demo')">MOCK</button>
+    <button :class="['mo', { on: mode === 'github' }]" :disabled="loading" @click="setMode('github')">LIVE</button>
   </div>
 </template>
 
 <style scoped>
-.mode-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+.mode-switch {
+  display: flex; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 3px; gap: 2px;
 }
-.mode-btn {
-  padding: 6px 16px;
-  border: 1px solid #d0d0d0;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
+.mo {
+  padding: 5px 14px; background: transparent; border: none;
+  border-radius: 3px; color: var(--text-muted); cursor: pointer;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 1.5px; transition: all 0.2s;
 }
-.mode-btn.active {
-  background: #4a90d9;
-  color: #fff;
-  border-color: #4a90d9;
+.mo.on {
+  background: var(--bg-elevated); color: var(--accent);
+  border: 1px solid var(--border-hover);
 }
-.mode-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.mode-hint {
-  font-size: 12px;
-  color: #999;
-  margin-left: 8px;
-}
+.mo:disabled { opacity: 0.4; cursor: not-allowed; }
+.mo:hover:not(:disabled):not(.on) { color: var(--text-secondary); }
 </style>

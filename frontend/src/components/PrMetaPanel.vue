@@ -7,63 +7,66 @@ defineProps<{
 </script>
 
 <template>
-  <div v-if="pr" class="pr-meta-panel">
-    <h3>PR 元数据</h3>
+  <div v-if="pr" class="meta-panel">
+    <div class="meta-header">PR DETAILS</div>
     <div class="meta-grid">
-      <div class="meta-item">
-        <span class="label">标题</span>
-        <span class="value">{{ pr.title }}</span>
+      <div class="meta-field">
+        <span class="meta-key">Title</span>
+        <span class="meta-val">{{ pr.title }}</span>
       </div>
-      <div class="meta-item">
-        <span class="label">作者</span>
-        <span class="value">{{ pr.author }}</span>
+      <div class="meta-field">
+        <span class="meta-key">Author</span>
+        <span class="meta-val">{{ pr.author }}</span>
       </div>
-      <div class="meta-item">
-        <span class="label">分支</span>
-        <span class="value">{{ pr.head_branch }} → {{ pr.base_branch }}</span>
+      <div class="meta-field">
+        <span class="meta-key">Branch</span>
+        <span class="meta-val">{{ pr.head_branch }} &rarr; {{ pr.base_branch }}</span>
       </div>
-      <div class="meta-item">
-        <span class="label">变更文件</span>
-        <span class="value">{{ pr.changed_files }} 个文件</span>
+      <div class="meta-field">
+        <span class="meta-key">Files</span>
+        <span class="meta-val num">{{ pr.changed_files }}</span>
       </div>
-      <div class="meta-item">
-        <span class="label">代码变更</span>
-        <span class="value">+{{ pr.additions }} −{{ pr.deletions }}</span>
+      <div class="meta-field">
+        <span class="meta-key">Changes</span>
+        <span class="meta-val">
+          <span class="add">+{{ pr.additions }}</span>
+          <span class="del">&minus;{{ pr.deletions }}</span>
+        </span>
       </div>
-      <div class="meta-item">
-        <span class="label">提交数</span>
-        <span class="value">{{ pr.commit_count }}</span>
+      <div class="meta-field">
+        <span class="meta-key">Commits</span>
+        <span class="meta-val num">{{ pr.commit_count }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.pr-meta-panel {
-  background: #f5f7fa;
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
+.meta-panel { margin-bottom: 24px; }
+
+.meta-header {
+  font-family: var(--font-heading);
+  font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+  color: var(--accent); margin-bottom: 10px;
 }
-h3 {
-  margin: 0 0 12px;
-  font-size: 16px;
-}
+
 .meta-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 14px 24px; padding: 16px 20px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); border-left: 3px solid var(--accent);
 }
-.meta-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+
+.meta-field { display: flex; flex-direction: column; gap: 2px; }
+.meta-key {
+  font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
+  color: var(--text-muted); text-transform: uppercase;
 }
-.label {
-  font-size: 12px;
-  color: #888;
+.meta-val {
+  font-size: 13px; color: var(--text-primary);
+  font-family: var(--font-mono); word-break: break-all;
 }
-.value {
-  font-size: 14px;
-}
+.meta-val.num { color: var(--accent); font-weight: 600; }
+.add { color: var(--success); }
+.del { color: var(--danger); margin-left: 6px; }
 </style>

@@ -1,98 +1,88 @@
 <script setup lang="ts">
 import type { RiskFinding } from '../types/review'
 
-defineProps<{
-  findings: RiskFinding[]
-}>()
+defineProps<{ findings: RiskFinding[] }>()
 
-function severityClass(severity: string): string {
-  return `severity-${severity}`
+function sevColor(s: string): string {
+  const m: Record<string, string> = {
+    critical: '#f87171', high: '#fbbf24', medium: '#60a5fa', low: '#8e929b',
+  }
+  return m[s] || '#8e929b'
 }
 
-function severityLabel(severity: string): string {
-  const map: Record<string, string> = {
-    critical: '严重',
-    high: '高',
-    medium: '中',
-    low: '低',
+function sevLabel(s: string): string {
+  const m: Record<string, string> = {
+    critical: 'CRIT', high: 'HIGH', medium: 'MED', low: 'LOW',
   }
-  return map[severity] || severity
+  return m[s] || s.toUpperCase()
 }
 </script>
 
 <template>
-  <div v-if="findings.length" class="risk-list">
-    <h3>风险发现 ({{ findings.length }})</h3>
-    <div v-for="f in findings" :key="f.id" class="risk-card">
-      <div class="risk-header">
-        <span :class="['severity-badge', severityClass(f.severity)]">
-          {{ severityLabel(f.severity) }}
+  <div v-if="findings.length" class="risk-section">
+    <div class="section-header">
+      <span class="section-icon">&#9888;</span>
+      <span>RISKS</span>
+      <span class="section-count">{{ findings.length }}</span>
+    </div>
+    <div v-for="f in findings" :key="f.id" class="risk-row">
+      <div class="risk-top">
+        <span class="risk-badge" :style="{ color: sevColor(f.severity), borderColor: sevColor(f.severity) }">
+          {{ sevLabel(f.severity) }}
         </span>
         <span class="risk-category">{{ f.category }}</span>
-        <span class="risk-confidence">置信度 {{ (f.confidence * 100).toFixed(0) }}%</span>
+        <span class="risk-confidence">{{ (f.confidence * 100).toFixed(0) }}%</span>
       </div>
-      <h4>{{ f.title }}</h4>
-      <p class="risk-file">{{ f.file_path }}{{ f.line ? `:${f.line}` : '' }}</p>
-      <p class="risk-evidence"><strong>证据：</strong>{{ f.evidence }}</p>
-      <p class="risk-reasoning"><strong>分析：</strong>{{ f.reasoning }}</p>
+      <h4 class="risk-title">{{ f.title }}</h4>
+      <div class="risk-location">
+        <span class="loc-icon">&gt;</span>
+        <span class="loc-path">{{ f.file_path }}</span>
+        <span v-if="f.line" class="loc-line">:{{ f.line }}</span>
+      </div>
+      <div class="risk-details">
+        <p class="detail-line"><span class="detail-label">EVIDENCE</span>{{ f.evidence }}</p>
+        <p class="detail-line"><span class="detail-label">REASON</span>{{ f.reasoning }}</p>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.risk-list {
-  margin-bottom: 20px;
+.risk-section { margin-bottom: 24px; }
+.section-header {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-heading); font-size: 13px;
+  font-weight: 700; letter-spacing: 0.5px;
+  color: var(--danger); margin-bottom: 12px;
 }
-h3 {
-  margin: 0 0 12px;
-  font-size: 16px;
+.section-icon { font-size: 13px; }
+.section-count { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+.risk-row {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 14px 18px;
+  margin-bottom: 8px; transition: border-color 0.15s;
 }
-.risk-card {
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
+.risk-row:hover { border-color: var(--border-hover); }
+.risk-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.risk-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  padding: 2px 6px; border: 1px solid; border-radius: 2px;
+  font-family: var(--font-mono);
 }
-.risk-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+.risk-category { font-size: 10px; color: var(--text-muted); letter-spacing: 0.8px; }
+.risk-confidence { margin-left: auto; font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+.risk-title { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.risk-location {
+  display: flex; align-items: center; gap: 4px;
+  margin-bottom: 10px; font-size: 11px; font-family: var(--font-mono);
 }
-.severity-badge {
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-}
-.severity-critical { background: #d9534f; }
-.severity-high { background: #f0ad4e; }
-.severity-medium { background: #5bc0de; }
-.severity-low { background: #999; }
-.risk-category {
-  font-size: 12px;
-  color: #888;
-}
-.risk-confidence {
-  font-size: 12px;
-  color: #aaa;
-  margin-left: auto;
-}
-h4 {
-  margin: 0 0 4px;
-  font-size: 14px;
-}
-.risk-file {
-  font-size: 12px;
-  color: #4a90d9;
-  font-family: monospace;
-  margin: 0 0 8px;
-}
-.risk-evidence, .risk-reasoning {
-  font-size: 13px;
-  color: #555;
-  margin: 0 0 4px;
-  line-height: 1.5;
+.loc-icon { color: var(--accent); }
+.loc-path { color: var(--teal); }
+.loc-line { color: var(--text-muted); }
+.risk-details { display: flex; flex-direction: column; gap: 4px; }
+.detail-line { font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+.detail-label {
+  font-size: 8px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--text-muted); margin-right: 8px;
 }
 </style>

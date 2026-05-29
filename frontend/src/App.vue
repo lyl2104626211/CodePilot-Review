@@ -40,40 +40,102 @@ async function handleSubmit(url: string) {
 </script>
 
 <template>
-  <div class="app-container">
-    <PrInputPanel :loading="loading" :error="error" :mode="mode" @submit="handleSubmit" />
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-icon">&#9670;</span>
+        <span class="brand-text">CodePilot</span>
+        <span class="brand-version">v0.2</span>
+      </div>
+      <nav class="sidebar-nav">
+        <span class="nav-label">REVIEW</span>
+      </nav>
+      <div class="sidebar-status">
+        <span class="status-dot" :class="{ live: report }"></span>
+        <span class="status-text">{{ report ? 'READY' : 'IDLE' }}</span>
+      </div>
+    </aside>
 
-    <ModeSelector v-model:mode="mode" :loading="loading" />
+    <main class="main-content">
+      <header class="topbar">
+        <h1 class="page-title">PR Review</h1>
+        <ModeSelector v-model:mode="mode" :loading="loading" />
+      </header>
 
-    <ProgressTimeline
-      :loading="loading"
-      :status="report?.status"
-      :warnings="report?.warnings"
-    />
+      <PrInputPanel :loading="loading" :error="error" :mode="mode" @submit="handleSubmit" />
 
-    <PrMetaPanel :pr="report?.pr" />
+      <ProgressTimeline
+        :loading="loading"
+        :status="report?.status"
+        :warnings="report?.warnings"
+      />
 
-    <ReviewSummary :summary="report?.summary" />
+      <PrMetaPanel :pr="report?.pr" />
 
-    <FindingFilters
-      v-if="report?.findings"
-      :findings="report.findings"
-      @update:filtered="filteredFindings = $event"
-    />
+      <ReviewSummary :summary="report?.summary" />
 
-    <RiskList :findings="filteredFindings" />
+      <FindingFilters
+        v-if="report?.findings?.length"
+        :findings="report.findings"
+        @update:filtered="filteredFindings = $event"
+      />
 
-    <SuggestionList
-      :suggestions="report?.suggestions ?? []"
-      :test-recommendations="report?.test_recommendations ?? []"
-    />
+      <RiskList :findings="filteredFindings" />
+
+      <SuggestionList
+        :suggestions="report?.suggestions ?? []"
+        :test-recommendations="report?.test_recommendations ?? []"
+      />
+    </main>
   </div>
 </template>
 
 <style scoped>
-.app-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 32px 24px;
+.app-shell { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 64px; min-height: 100vh;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 16px 0; gap: 24px; flex-shrink: 0;
+}
+
+.brand { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.brand-icon { font-size: 20px; color: var(--accent); }
+.brand-text {
+  font-family: var(--font-heading);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.5px; color: var(--text-primary);
+}
+.brand-version { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; }
+
+.sidebar-nav { flex: 1; display: flex; align-items: flex-start; }
+.nav-label {
+  font-size: 9px; letter-spacing: 2px; color: var(--text-muted);
+  transform: rotate(-90deg); white-space: nowrap;
+}
+
+.sidebar-status { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);
+}
+.status-dot.live { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.status-text { font-size: 8px; color: var(--text-muted); letter-spacing: 1px; }
+
+.main-content {
+  flex: 1; max-width: 960px; padding: 32px 40px 64px; overflow-y: auto;
+}
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 28px; padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-title {
+  font-family: var(--font-heading);
+  font-size: 22px; font-weight: 700; margin: 0;
+  letter-spacing: -0.3px; color: var(--text-primary);
 }
 </style>
