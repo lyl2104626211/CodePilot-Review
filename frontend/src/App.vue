@@ -15,6 +15,7 @@ import ReviewCommentPreview from './components/ReviewCommentPreview.vue'
 import ReportQualityPanel from './components/ReportQualityPanel.vue'
 import EmptyState from './components/EmptyState.vue'
 import ErrorState from './components/ErrorState.vue'
+import SuggestedPatchPanel from './components/SuggestedPatchPanel.vue'
 
 const mode = ref<ReviewMode>('demo')
 const loading = ref(false)
@@ -131,6 +132,12 @@ async function handleGenerate(ids: string[]) {
         v-if="comments.length"
         :comments="comments"
         :markdown="markdown"
+      />
+
+      <SuggestedPatchPanel
+        v-if="report?.task_id && report?.suggestions?.length"
+        :task-id="report.task_id"
+        :suggestions="report.suggestions"
       />
     </main>
   </div>

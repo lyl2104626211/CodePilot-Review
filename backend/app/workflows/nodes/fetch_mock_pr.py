@@ -25,8 +25,26 @@ def fetch_mock_pr_node(provider: PullRequestProvider):
         try:
             snapshot = await provider.get_pull_request(state["parsed_pr"])
             state["pr_snapshot"] = snapshot
-            logger.debug("[工作流] fetch_mock_pr 节点完成 | task_id={} title={} files={}",
-                        state.get("task_id"), snapshot.title, snapshot.changed_files)
+
+            # ===== PR 数据详细日志（控制台 + 文件） =====
+            logger.info("=" * 60)
+            logger.info("[PR 数据] 标题: {}", snapshot.title)
+            logger.info("[PR 数据] 作者: {}", snapshot.author)
+            logger.info("[PR 数据] 分支: {} -> {}", snapshot.head_branch, snapshot.base_branch)
+            logger.info("[PR 数据] 文件数: {} | +{} -{} | commits: {}",
+                        snapshot.changed_files, snapshot.additions,
+                        snapshot.deletions, snapshot.commit_count)
+            logger.info("[PR 数据] 变更文件列表:")
+            for i, f in enumerate(snapshot.files):
+                logger.info("[PR 数据]   {}. {} ({}) +{} -{}",
+                            i + 1, f.path, f.status, f.additions, f.deletions)
+                if f.patch:
+                    # 截取前 500 字符，避免日志过长
+                    patch_preview = f.patch[:500]
+                    if len(f.patch) > 500:
+                        patch_preview += f"\n... [截断, 共 {len(f.patch)} 字符]"
+                    logger.info("[PR 数据]     diff:\n{}", patch_preview)
+            logger.info("=" * 60)
         except Exception as e:
             logger.error("[工作流] fetch_mock_pr 节点失败 | task_id={} error={}", state.get("task_id"), str(e))
             state["error_message"] = str(e)

@@ -1,4 +1,6 @@
 """节点：生成 PR 变更总结"""
+import json
+
 from app.context.models import ReviewContext
 from app.core.logger import logger
 from app.llm.base import LLMClient, LLMError
@@ -48,11 +50,21 @@ def generate_summary_node(llm: LLMClient):
                 deletions=pr.deletions,
             )
 
+            # ===== Prompt 日志（控制台 + 文件） =====
+            logger.info("=" * 60)
+            logger.info("[Summary Prompt] System Prompt:\n{}", SUMMARY_SYSTEM)
+            logger.info("[Summary Prompt] User Prompt:\n{}", user_prompt)
+            logger.info("-" * 40)
+
             result = await llm.generate_json(
                 system_prompt=SUMMARY_SYSTEM,
                 user_prompt=user_prompt,
                 schema_name="summary",
             )
+
+            # ===== LLM 响应日志（控制台 + 文件） =====
+            logger.info("[Summary 响应] LLM 输出:\n{}", json.dumps(result, ensure_ascii=False, indent=2))
+            logger.info("=" * 60)
 
             state["summary"] = ReviewSummary(
                 overview=result.get("overview", "无法生成总结"),

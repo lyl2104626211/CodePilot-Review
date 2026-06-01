@@ -117,3 +117,61 @@ def build_suggestion_prompt(findings_json: str, files_context: str = "") -> str:
 
 风险发现：
 {findings_json}{context_block}"""
+
+
+# ===== Day 3: Suggested Fix Preview Prompts =====
+
+PATCH_SYSTEM = """你是一个谨慎的代码评审助手。请基于 PR diff 和上下文，为指定 Review 建议生成一个最小范围的代码修复预览。
+
+约束规则：
+1. 只修改与建议直接相关的代码
+2. 不重写整个文件
+3. 不编造不存在的 API 或框架
+4. 不删除无关逻辑
+5. 不修改密钥、环境变量、锁文件
+6. 如果上下文不足以生成可靠代码，original_code 和 suggested_code 都留空，并在 explanation 中说明原因
+7. 输出必须是严格 JSON
+
+输出格式：
+{
+  "file_path": "string",
+  "start_line": 1,
+  "end_line": 10,
+  "original_code": "string",
+  "suggested_code": "string",
+  "explanation": "string"
+}"""
+
+
+def build_patch_prompt(
+    pr_title: str,
+    file_path: str,
+    suggestion_comment: str,
+    suggestion_rationale: str,
+    suggested_fix: str,
+    finding_evidence: str = "",
+    finding_reasoning: str = "",
+    patch: str = "",
+    content_excerpt: str = "",
+) -> str:
+    """构建修复预览生成 prompt"""
+    sections = [
+        f"PR 标题：{pr_title}",
+        f"目标文件：{file_path}",
+        f"Review 建议：{suggestion_comment}",
+        f"建议原因：{suggestion_rationale}",
+        f"建议修复：{suggested_fix}",
+    ]
+    if finding_evidence:
+        sections.append(f"风险证据：{finding_evidence}")
+    if finding_reasoning:
+        sections.append(f"风险推理：{finding_reasoning}")
+    if patch:
+        # 截断过长 patch
+        patch_preview = patch[:3000]
+        sections.append(f"相关 diff：\n{patch_preview}")
+    if content_excerpt:
+        excerpt_preview = content_excerpt[:2000]
+        sections.append(f"文件上下文：\n{excerpt_preview}")
+
+    return "\n\n".join(sections)

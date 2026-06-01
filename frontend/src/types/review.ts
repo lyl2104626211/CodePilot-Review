@@ -110,3 +110,29 @@ export interface ReportQuality {
   fallback_used: boolean
   notes: string[]
 }
+
+// ===== Suggested Fix Preview =====
+
+export interface SuggestedPatch {
+  id: string
+  suggestion_id: string
+  finding_id?: string
+  file_path: string
+  start_line?: number
+  end_line?: number
+  patch_type: 'github_suggestion' | 'unified_diff' | 'none'
+  original_code?: string
+  suggested_code?: string
+  unified_diff?: string
+  github_suggestion?: string
+  explanation: string
+  applicable: boolean
+  validation_warnings: string[]
+  safety_notes: string[]
+}
+
+export interface CreateSuggestedPatchesResponse {
+  task_id: string
+  patches: SuggestedPatch[]
+  warnings: string[]
+}

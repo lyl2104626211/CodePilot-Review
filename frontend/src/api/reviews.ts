@@ -1,4 +1,4 @@
-import type { CreateReviewCommentsResponse, CreateReviewTaskResponse, ReportQuality, ReviewMode, ReviewReport, ReviewTaskStatus } from '../types/review'
+import type { CreateReviewCommentsResponse, CreateReviewTaskResponse, ReportQuality, ReviewMode, ReviewReport, ReviewTaskStatus, SuggestedPatch, CreateSuggestedPatchesResponse } from '../types/review'
 
 async function readError(response: Response): Promise<string> {
   try {
@@ -42,6 +42,16 @@ export async function createReviewComments(taskId: string, suggestionIds: string
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ suggestion_ids: suggestionIds, include_summary: true, include_test_recommendations: true }),
+  })
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function createSuggestedPatches(taskId: string, suggestionIds: string[]): Promise<CreateSuggestedPatchesResponse> {
+  const response = await fetch(`/api/reviews/${taskId}/suggested-patches`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ suggestion_ids: suggestionIds }),
   })
   if (!response.ok) throw new Error(await readError(response))
   return response.json()

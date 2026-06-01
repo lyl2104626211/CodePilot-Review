@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.logger import logger
 from app.schemas.github import ParsedPullRequest
+from app.schemas.patch import CreateSuggestedPatchesRequest
 from app.schemas.review import (
     CreateReviewCommentsRequest,
     CreateReviewCommentsResponse,
@@ -17,7 +18,7 @@ from app.services.review_comment_service import (
     create_review_comment_drafts,
     get_report_quality,
 )
-from app.services.review_service import create_review_task, get_review_result, store
+from app.services.review_service import create_review_task, get_review_result, store, _create_llm_client
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 
@@ -84,6 +85,26 @@ async def create_comments(task_id: str, request: CreateReviewCommentsRequest):
     try:
         return create_review_comment_drafts(result, request)
     except CommentServiceError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@router.post("/{task_id}/suggested-patches")
+async def create_suggested_patches(task_id: str, request: CreateSuggestedPatchesRequest):
+    """生成 AI 修复预览（Day 3 新增）"""
+    from app.services.patch_suggestion_service import PatchSuggestionService, PatchServiceError
+    from app.services.patch_validator import PatchValidator
+
+    result = await get_review_result(task_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Review task not found.")
+    if result.status.value == "failed":
+        raise HTTPException(status_code=409, detail="Review report is not ready.")
+
+    try:
+        llm = _create_llm_client()
+        service = PatchSuggestionService(llm, PatchValidator())
+        return await service.create_patches(result, request.suggestion_ids)
+    except PatchServiceError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
 
