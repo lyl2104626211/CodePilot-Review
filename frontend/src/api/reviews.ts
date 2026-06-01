@@ -1,4 +1,4 @@
-import type { CreateReviewTaskResponse, ReviewMode, ReviewReport } from '../types/review'
+import type { CreateReviewCommentsResponse, CreateReviewTaskResponse, ReportQuality, ReviewMode, ReviewReport, ReviewTaskStatus } from '../types/review'
 
 async function readError(response: Response): Promise<string> {
   try {
@@ -23,4 +23,32 @@ export async function getReviewReport(taskId: string): Promise<ReviewReport> {
   const response = await fetch(`/api/reviews/${taskId}`)
   if (!response.ok) throw new Error(await readError(response))
   return response.json()
+}
+
+export async function getReviewStatus(taskId: string): Promise<ReviewTaskStatus> {
+  const response = await fetch(`/api/reviews/${taskId}/status`)
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function getReviewQuality(taskId: string): Promise<ReportQuality> {
+  const response = await fetch(`/api/reviews/${taskId}/quality`)
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function createReviewComments(taskId: string, suggestionIds: string[]): Promise<CreateReviewCommentsResponse> {
+  const response = await fetch(`/api/reviews/${taskId}/comments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ suggestion_ids: suggestionIds, include_summary: true, include_test_recommendations: true }),
+  })
+  if (!response.ok) throw new Error(await readError(response))
+  return response.json()
+}
+
+export async function exportMarkdown(taskId: string): Promise<string> {
+  const response = await fetch(`/api/reviews/${taskId}/export.md`)
+  if (!response.ok) throw new Error(await readError(response))
+  return response.text()
 }

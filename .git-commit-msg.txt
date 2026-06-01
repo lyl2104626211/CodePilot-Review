@@ -1,0 +1,27 @@
+Day 3 全部完成: 模拟评论 + 质量摘要 + 状态组件 + 最终文档
+
+后端:
+- schemas/review.py: 新增 ReviewCommentDraft, CreateReviewCommentsRequest/Response, ReviewTaskStatus, ReportQualitySummary
+- services/review_comment_service.py: 评论生成服务 (单条评论模板 + 完整 Markdown 渲染 + 质量摘要)
+- api/reviews.py: 新增 4 个接口
+  GET /{task_id}/status - 任务状态查询
+  GET /{task_id}/quality - 报告质量摘要
+  POST /{task_id}/comments - 生成模拟评论
+  GET /{task_id}/export.md - 导出 Markdown
+- tests/test_review_comments.py: 10 个测试
+
+前端:
+- ReviewCommentComposer.vue: 建议勾选 + 全选 + 生成按钮
+- ReviewCommentPreview.vue: GitHub 风格评论预览 + copy/download
+- ReportQualityPanel.vue: 质量摘要面板
+- EmptyState.vue: 空状态组件
+- ErrorState.vue: 错误状态 + retry
+- App.vue: 集成所有新组件
+- API/types: 新增 Day 3 类型和接口
+
+文档:
+- docs/demo-script.md: 演示脚本
+- docs/final-checklist.md: 最终验收清单
+- docs/model-context-strategy.md: 模型与上下文策略
+
+后端 52 测试通过, 前端 typecheck + build 通过。

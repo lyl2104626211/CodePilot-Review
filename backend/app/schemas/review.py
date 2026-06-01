@@ -66,3 +66,51 @@ class ReviewReport(BaseModel):
     test_recommendations: list[str] = []
     warnings: list[str] = []
     error_message: str | None = None
+
+
+# ===== Day 3: 模拟评论与质量摘要模型 =====
+
+
+class ReviewCommentDraft(BaseModel):
+    """单条模拟 Review 评论草稿"""
+    id: str                          # comment_001
+    suggestion_id: str               # 关联的 suggestion
+    finding_id: str | None = None    # 关联的 risk finding
+    file_path: str | None = None     # 文件路径（模拟 inline comment 位置）
+    line: int | None = None          # 行号
+    body: str                        # 完整评论正文（Markdown）
+    severity: RiskSeverity | None = None
+    blocking: bool = False
+
+
+class CreateReviewCommentsRequest(BaseModel):
+    """生成模拟评论请求"""
+    suggestion_ids: list[str]
+    include_summary: bool = True
+    include_test_recommendations: bool = True
+
+
+class CreateReviewCommentsResponse(BaseModel):
+    """生成模拟评论响应"""
+    task_id: str
+    comments: list[ReviewCommentDraft]
+    markdown: str                    # 完整 Review Markdown
+
+
+class ReviewTaskStatus(BaseModel):
+    """任务状态信息"""
+    task_id: str
+    status: TaskStatus
+    progress_events: list[dict] = []
+    warnings: list[str] = []
+
+
+class ReportQualitySummary(BaseModel):
+    """报告质量摘要"""
+    total_findings: int
+    high_confidence_findings: int    # confidence >= 0.7
+    low_confidence_findings: int     # confidence < 0.5
+    blocking_suggestions: int
+    warning_count: int
+    fallback_used: bool
+    notes: list[str]

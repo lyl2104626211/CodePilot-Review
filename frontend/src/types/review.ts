@@ -74,3 +74,39 @@ export interface CreateReviewTaskResponse {
   task_id: string
   status: string
 }
+
+// ===== Day 3: 模拟评论与质量类型 =====
+
+export interface ReviewCommentDraft {
+  id: string
+  suggestion_id: string
+  finding_id?: string
+  file_path?: string
+  line?: number
+  body: string
+  severity?: string
+  blocking: boolean
+}
+
+export interface CreateReviewCommentsResponse {
+  task_id: string
+  comments: ReviewCommentDraft[]
+  markdown: string
+}
+
+export interface ReviewTaskStatus {
+  task_id: string
+  status: string
+  progress_events: { node: string; status: string; message: string }[]
+  warnings: string[]
+}
+
+export interface ReportQuality {
+  total_findings: number
+  high_confidence_findings: number
+  low_confidence_findings: number
+  blocking_suggestions: number
+  warning_count: number
+  fallback_used: boolean
+  notes: string[]
+}

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { ReviewMode, ReviewReport, RiskFinding } from './types/review'
-import { createReviewTask, getReviewReport } from './api/reviews'
+import type { ReviewMode, ReviewReport, RiskFinding, ReviewCommentDraft, ReportQuality } from './types/review'
+import { createReviewTask, getReviewReport, getReviewQuality, createReviewComments } from './api/reviews'
 import PrInputPanel from './components/PrInputPanel.vue'
 import PrMetaPanel from './components/PrMetaPanel.vue'
 import ReviewSummary from './components/ReviewSummary.vue'
@@ -10,18 +10,30 @@ import SuggestionList from './components/SuggestionList.vue'
 import ModeSelector from './components/ModeSelector.vue'
 import ProgressTimeline from './components/ProgressTimeline.vue'
 import FindingFilters from './components/FindingFilters.vue'
+import ReviewCommentComposer from './components/ReviewCommentComposer.vue'
+import ReviewCommentPreview from './components/ReviewCommentPreview.vue'
+import ReportQualityPanel from './components/ReportQualityPanel.vue'
+import EmptyState from './components/EmptyState.vue'
+import ErrorState from './components/ErrorState.vue'
 
 const mode = ref<ReviewMode>('demo')
 const loading = ref(false)
 const error = ref('')
 const report = ref<ReviewReport | null>(null)
 const filteredFindings = ref<RiskFinding[]>([])
+const quality = ref<ReportQuality | null>(null)
+const genLoading = ref(false)
+const comments = ref<ReviewCommentDraft[]>([])
+const markdown = ref('')
 
 async function handleSubmit(url: string) {
   loading.value = true
   error.value = ''
   report.value = null
   filteredFindings.value = []
+  quality.value = null
+  comments.value = []
+  markdown.value = ''
   try {
     const { task_id } = await createReviewTask(url, mode.value)
     const result = await getReviewReport(task_id)
@@ -30,11 +42,28 @@ async function handleSubmit(url: string) {
     } else {
       report.value = result
       filteredFindings.value = result.findings ?? []
+      try {
+        quality.value = await getReviewQuality(task_id)
+      } catch { /* quality is optional */ }
     }
   } catch (e: any) {
     error.value = e.message || '请求失败'
   } finally {
     loading.value = false
+  }
+}
+
+async function handleGenerate(ids: string[]) {
+  if (!report.value) return
+  genLoading.value = true
+  try {
+    const resp = await createReviewComments(report.value.task_id, ids)
+    comments.value = resp.comments
+    markdown.value = resp.markdown
+  } catch (e: any) {
+    error.value = e.message || '评论生成失败'
+  } finally {
+    genLoading.value = false
   }
 }
 </script>
@@ -45,7 +74,7 @@ async function handleSubmit(url: string) {
       <div class="brand">
         <span class="brand-icon">&#9670;</span>
         <span class="brand-text">CodePilot</span>
-        <span class="brand-version">v0.2</span>
+        <span class="brand-version">v0.3</span>
       </div>
       <nav class="sidebar-nav">
         <span class="nav-label">REVIEW</span>
@@ -64,15 +93,17 @@ async function handleSubmit(url: string) {
 
       <PrInputPanel :loading="loading" :error="error" :mode="mode" @submit="handleSubmit" />
 
-      <ProgressTimeline
-        :loading="loading"
-        :status="report?.status"
-        :warnings="report?.warnings"
-      />
+      <ErrorState v-if="error" :message="error" :hint="error.includes('Token') || error.includes('权限') ? '请检查 .env 中的 GITHUB_TOKEN 配置' : undefined" @retry="() => error = ''" />
+
+      <ProgressTimeline :loading="loading" :status="report?.status" :warnings="report?.warnings" />
+
+      <EmptyState v-if="!loading && !error && !report" title="Enter a PR URL to start analysis" detail="Paste a GitHub pull request URL and click Run Review" />
 
       <PrMetaPanel :pr="report?.pr" />
 
       <ReviewSummary :summary="report?.summary" />
+
+      <ReportQualityPanel v-if="quality" :quality="quality" :warnings="report?.warnings ?? []" />
 
       <FindingFilters
         v-if="report?.findings?.length"
@@ -80,11 +111,26 @@ async function handleSubmit(url: string) {
         @update:filtered="filteredFindings = $event"
       />
 
+      <EmptyState v-if="report && !report.findings?.length" title="No risks detected" detail="The analysis did not find any significant risk patterns in this PR" />
+
       <RiskList :findings="filteredFindings" />
 
       <SuggestionList
         :suggestions="report?.suggestions ?? []"
         :test-recommendations="report?.test_recommendations ?? []"
+      />
+
+      <ReviewCommentComposer
+        v-if="report?.suggestions?.length"
+        :suggestions="report.suggestions"
+        :loading="genLoading"
+        @generate="handleGenerate"
+      />
+
+      <ReviewCommentPreview
+        v-if="comments.length"
+        :comments="comments"
+        :markdown="markdown"
       />
     </main>
   </div>

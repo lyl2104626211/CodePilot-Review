@@ -55,3 +55,4 @@
 - 详细 PRD：[agents/prd.md](agents/prd.md) / [agents/prd.json](agents/prd.json)
 - Day 1 计划：[docs/plans/day1-development.md](docs/plans/day1-development.md)
 - Day 2 计划：[docs/plans/day2-development.md](docs/plans/day2-development.md)
+- Day 3 计划：[docs/plans/day3-development.md](docs/plans/day3-development.md)
