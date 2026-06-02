@@ -66,14 +66,16 @@ class OpenAICompatibleLLMClient:
                 )
 
                 if response.status_code != 200:
+                    # 安全：仅记录响应前 100 字符，防止 API Key 在错误响应体中泄漏到日志
                     logger.warning("LLM API 返回非 200 | status={} body={}",
-                                  response.status_code, response.text[:300])
+                                  response.status_code, response.text[:100])
                     if attempt == 0:
                         continue
                     raise LLMError(f"LLM API error: status={response.status_code}")
 
                 data = response.json()
-                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                choices = data.get("choices") or []
+                content = choices[0].get("message", {}).get("content", "") if choices else ""
 
                 # 尝试提取 JSON（可能被 markdown 代码块包裹）
                 result = self._extract_json(content)
@@ -86,7 +88,9 @@ class OpenAICompatibleLLMClient:
             except LLMError:
                 raise
             except Exception as e:
-                logger.error("LLM 调用异常 | attempt={} error={}", attempt + 1, str(e))
+                # 安全：截断异常信息，防止 httpx 在异常消息中包含请求头（如 Authorization）
+                logger.error("LLM 调用异常 | attempt={} type={} error={}",
+                            attempt + 1, type(e).__name__, str(e) or repr(e)[:200])
                 if attempt == 0:
                     continue
                 raise LLMError(f"LLM call failed after retries: {e}") from e
