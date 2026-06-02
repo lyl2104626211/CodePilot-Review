@@ -17,21 +17,46 @@ onUnmounted(() => {
   if (dlTimer) clearTimeout(dlTimer)
 })
 
-/** 安全渲染 Markdown 正文：先转义 HTML 防 XSS，再应用简单格式 */
+/** 安全渲染 Markdown 正文 */
 function renderSafeBody(body: string): string {
-  // 1. 先转义所有 HTML 标签
-  const escaped = body
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+  // 1. 保护代码块（``` 或 4空格缩进），用占位符替换
+  const codeBlocks: string[] = []
+  let safe = body
+    // 先保护 ``` fences
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
+      codeBlocks.push(`<pre class="cb">${esc(code.trim())}</pre>`)
+      return `%%CODEBLOCK_${codeBlocks.length - 1}%%`
+    })
+    // 再保护 4 空格缩进代码块（连续行）
+    .replace(/(?:^|\n)(    [^\n]+(?:\n    [^\n]+)*)/g, (_full, code) => {
+      const unindented = code.replace(/^    /gm, '')
+      codeBlocks.push(`<pre class="cb">${esc(unindented)}</pre>`)
+      return `\n%%CODEBLOCK_${codeBlocks.length - 1}%%\n`
+    })
 
-  // 2. 再应用 Markdown 格式（此时内容已安全）
-  return escaped
-    .replace(/\n/g, '<br>')
+  // 2. 转义 HTML
+  safe = esc(safe)
+
+  // 3. 应用 inline 格式
+  safe = safe
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.*?)`/g, '<code style="background:#1c1f28;padding:1px 4px;border-radius:2px;font-family:monospace">$1</code>')
-    .replace(/^&gt; (.*)$/gm, '<em style="color:#8b9099">$1</em>')
+    .replace(/`([^`]+)`/g, '<code class="ic">$1</code>')
+    .replace(/^&gt; (.*)$/gm, '<em class="qt">$1</em>')
+
+  // 4. 段落：双换行 → </p><p>，单换行 → <br>
+  safe = safe
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>')
+  safe = `<p>${safe}</p>`
+
+  // 5. 还原代码块占位符
+  safe = safe.replace(/%%CODEBLOCK_(\d+)%%/g, (_, i) => codeBlocks[parseInt(i)])
+
+  return safe
+}
+
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
 async function copyAll() {
@@ -135,7 +160,20 @@ function downloadMd() {
 .cmt-tag.ok { color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.4); }
 .cmt-file { font-size: 11px; color: var(--teal); font-family: var(--font-mono); }
 .cmt-sev { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; font-family: var(--font-mono); }
-.cmt-body { font-size: 12px; line-height: 1.7; }
+.cmt-body { font-size: 13px; line-height: 1.75; }
+.cmt-body :deep(p) { margin: 0 0 8px; }
+.cmt-body :deep(p:last-child) { margin-bottom: 0; }
+.cmt-body :deep(.cb) {
+  background: #0d1117; border: 1px solid #21262d; border-radius: 4px;
+  padding: 12px 14px; margin: 10px 0; overflow-x: auto;
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+  color: #c9d1d9; white-space: pre; tab-size: 4;
+}
+.cmt-body :deep(.ic) {
+  background: #1c1f28; padding: 1px 5px; border-radius: 3px;
+  font-family: var(--font-mono); font-size: 12px;
+}
+.cmt-body :deep(.qt) { color: #8b9099; }
 
 .md-full { margin-top: 14px; padding-top: 12px; border-top: 1px solid #21262d; }
 .md-label {
