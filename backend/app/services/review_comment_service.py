@@ -154,8 +154,8 @@ def _extract_original_code(suggestion, finding, patch: str) -> str:
     if patch:
         trimmed = patch.strip()
         if trimmed:
-            # 截取前 1500 字符，足够展示上下文
-            return trimmed[:1500] + ("\n..." if len(trimmed) > 1500 else "")
+            # 完整展示 patch 内容（diff 格式），不截断
+            return trimmed
 
     return ""
 

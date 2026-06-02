@@ -25,32 +25,33 @@ function renderSafeBody(body: string): string {
     // 先保护 ``` fences
     .replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
       codeBlocks.push(`<pre class="cb">${esc(code.trim())}</pre>`)
-      return `%%CODEBLOCK_${codeBlocks.length - 1}%%`
+      return `%%CODE_${codeBlocks.length - 1}%%`
     })
     // 再保护 4 空格缩进代码块（连续行）
     .replace(/(?:^|\n)(    [^\n]+(?:\n    [^\n]+)*)/g, (_full, code) => {
       const unindented = code.replace(/^    /gm, '')
       codeBlocks.push(`<pre class="cb">${esc(unindented)}</pre>`)
-      return `\n%%CODEBLOCK_${codeBlocks.length - 1}%%\n`
+      return `\n%%CODE_${codeBlocks.length - 1}%%\n`
     })
 
-  // 2. 转义 HTML
+  // 2. 转义 HTML（跳过占位符区域）
   safe = esc(safe)
 
-  // 3. 应用 inline 格式
+  // 3. 还原代码块（在段落处理之前，避免被 <p> 包裹）
+  safe = safe.replace(/%%CODE_(\d+)%%/g, (_, i) => codeBlocks[parseInt(i)])
+
+  // 4. 应用 inline 格式
   safe = safe
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/`([^`]+)`/g, '<code class="ic">$1</code>')
     .replace(/^&gt; (.*)$/gm, '<em class="qt">$1</em>')
+    .replace(/\n---\n/g, '<hr class="sep">')
 
-  // 4. 段落：双换行 → </p><p>，单换行 → <br>
+  // 5. 段落：双换行 → </p><p>，单换行 → <br>
   safe = safe
     .replace(/\n\n/g, '</p><p>')
     .replace(/\n/g, '<br>')
   safe = `<p>${safe}</p>`
-
-  // 5. 还原代码块占位符
-  safe = safe.replace(/%%CODEBLOCK_(\d+)%%/g, (_, i) => codeBlocks[parseInt(i)])
 
   return safe
 }
@@ -174,6 +175,7 @@ function downloadMd() {
   font-family: var(--font-mono); font-size: 12px;
 }
 .cmt-body :deep(.qt) { color: #8b9099; }
+.cmt-body :deep(.sep) { border: none; border-top: 1px solid #21262d; margin: 12px 0; }
 
 .md-full { margin-top: 14px; padding-top: 12px; border-top: 1px solid #21262d; }
 .md-label {

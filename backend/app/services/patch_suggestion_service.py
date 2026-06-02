@@ -1,5 +1,6 @@
 """PatchSuggestionService — 根据用户选择的 suggestion 生成 AI 代码修复预览"""
 import difflib
+import json
 
 from app.core.logger import logger
 from app.llm.base import LLMClient, LLMError
@@ -20,7 +21,7 @@ def build_unified_diff(file_path: str, original_code: str, suggested_code: str) 
     return "".join(
         difflib.unified_diff(
             original_lines, suggested_lines,
-            fromfile=file_path, tofile=file_path, lineterm="",
+            fromfile=file_path, tofile=file_path, lineterm="", n=10000,
         )
     )
 
@@ -66,7 +67,7 @@ class PatchSuggestionService:
 
             if not s.file_path:
                 patches.append(self._no_patch(sid, s.finding_id, s.comment,
-                                              "suggestion 未关联文件路径，无法生成代码修复"))
+                                              "suggestion 未关联文件路径，无法生成代码修复", i))
                 continue
 
             try:
@@ -76,7 +77,7 @@ class PatchSuggestionService:
                 logger.error("patch 生成失败 | suggestion_id={} error={}", sid, str(e))
                 warnings.append(f"Failed to generate patch for {sid}: {e}")
                 patches.append(self._no_patch(sid, s.finding_id, s.comment,
-                                              f"LLM 生成失败: {e}"))
+                                              f"LLM 生成失败: {e}", i))
 
         logger.info("修复预览生成完成 | task_id={} patches={} warnings={}",
                     report.task_id, len(patches), len(warnings))
@@ -120,7 +121,7 @@ class PatchSuggestionService:
         )
 
         logger.info("[Patch 响应] LLM 输出:\n{}",
-                    __import__("json").dumps(result, ensure_ascii=False, indent=2))
+                    json.dumps(result, ensure_ascii=False, indent=2))
 
         original_code = result.get("original_code", "")
         suggested_code = result.get("suggested_code", "")
@@ -157,10 +158,10 @@ class PatchSuggestionService:
         return patch
 
     def _no_patch(self, suggestion_id: str, finding_id: str | None,
-                  comment: str, explanation: str) -> SuggestedPatch:
+                  comment: str, explanation: str, index: int = 0) -> SuggestedPatch:
         """返回空 patch（无法生成修复时）"""
         return SuggestedPatch(
-            id=f"patch_{suggestion_id}",
+            id=f"patch_{index + 1:03d}",
             suggestion_id=suggestion_id,
             finding_id=finding_id,
             file_path="",
