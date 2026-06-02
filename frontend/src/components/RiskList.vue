@@ -31,13 +31,13 @@ function sevLabel(s: string): string {
           {{ sevLabel(f.severity) }}
         </span>
         <span class="risk-category">{{ f.category }}</span>
-        <span class="risk-confidence">{{ (f.confidence * 100).toFixed(0) }}%</span>
+        <span class="risk-confidence">{{ Math.round(Math.min(Math.max(f.confidence, 0), 1) * 100) }}%</span>
       </div>
       <h4 class="risk-title">{{ f.title }}</h4>
       <div class="risk-location">
         <span class="loc-icon">&gt;</span>
         <span class="loc-path">{{ f.file_path }}</span>
-        <span v-if="f.line" class="loc-line">:{{ f.line }}</span>
+        <span v-if="f.line !== undefined && f.line !== null" class="loc-line">:{{ f.line }}</span>
       </div>
       <div class="risk-details">
         <p class="detail-line"><span class="detail-label">EVIDENCE</span>{{ f.evidence }}</p>

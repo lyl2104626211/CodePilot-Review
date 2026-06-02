@@ -26,8 +26,10 @@ const quality = ref<ReportQuality | null>(null)
 const genLoading = ref(false)
 const comments = ref<ReviewCommentDraft[]>([])
 const markdown = ref('')
+const lastUrl = ref('')
 
 async function handleSubmit(url: string) {
+  lastUrl.value = url
   loading.value = true
   error.value = ''
   report.value = null
@@ -40,17 +42,29 @@ async function handleSubmit(url: string) {
     const result = await getReviewReport(task_id)
     if (result.status === 'failed') {
       error.value = result.error_message || '分析失败，请重试'
+    } else if (result.status === 'queued' || result.status === 'running') {
+      // 仍返回不完整报告：允许用户看到部分结果
+      report.value = result
+      filteredFindings.value = result.findings.length ? result.findings : []
     } else {
       report.value = result
-      filteredFindings.value = result.findings ?? []
+      filteredFindings.value = result.findings.length ? result.findings : []
       try {
         quality.value = await getReviewQuality(task_id)
       } catch { /* quality is optional */ }
     }
-  } catch (e: any) {
-    error.value = e.message || '请求失败'
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : '请求失败'
   } finally {
     loading.value = false
+  }
+}
+
+function handleRetry() {
+  if (lastUrl.value) {
+    handleSubmit(lastUrl.value)
+  } else {
+    error.value = ''
   }
 }
 
@@ -61,8 +75,8 @@ async function handleGenerate(ids: string[]) {
     const resp = await createReviewComments(report.value.task_id, ids)
     comments.value = resp.comments
     markdown.value = resp.markdown
-  } catch (e: any) {
-    error.value = e.message || '评论生成失败'
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : '评论生成失败'
   } finally {
     genLoading.value = false
   }
@@ -94,7 +108,7 @@ async function handleGenerate(ids: string[]) {
 
       <PrInputPanel :loading="loading" :error="error" :mode="mode" @submit="handleSubmit" />
 
-      <ErrorState v-if="error" :message="error" :hint="error.includes('Token') || error.includes('权限') ? '请检查 .env 中的 GITHUB_TOKEN 配置' : undefined" @retry="() => error = ''" />
+      <ErrorState v-if="error" :message="error" :hint="error.includes('Token') || error.includes('权限') ? '请检查 .env 中的 GITHUB_TOKEN 配置' : undefined" @retry="handleRetry" />
 
       <ProgressTimeline :loading="loading" :status="report?.status" :warnings="report?.warnings" />
 
@@ -147,37 +161,38 @@ async function handleGenerate(ids: string[]) {
 .app-shell { display: flex; min-height: 100vh; }
 
 .sidebar {
-  width: 64px; min-height: 100vh;
+  width: 72px; min-height: 100vh;
   background: var(--bg-primary);
   border-right: 1px solid var(--border);
   display: flex; flex-direction: column; align-items: center;
-  padding: 16px 0; gap: 24px; flex-shrink: 0;
+  padding: 20px 0; gap: 28px; flex-shrink: 0;
 }
 
-.brand { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.brand-icon { font-size: 20px; color: var(--accent); }
+.brand { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.brand-icon { font-size: 22px; color: var(--accent); }
 .brand-text {
   font-family: var(--font-heading);
-  font-size: 11px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   letter-spacing: 0.5px; color: var(--text-primary);
 }
-.brand-version { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; }
+.brand-version { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; }
 
 .sidebar-nav { flex: 1; display: flex; align-items: flex-start; }
 .nav-label {
-  font-size: 9px; letter-spacing: 2px; color: var(--text-muted);
+  font-size: 10px; letter-spacing: 2px; color: var(--text-muted);
   transform: rotate(-90deg); white-space: nowrap;
 }
 
-.sidebar-status { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.sidebar-status { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .status-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);
+  width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted);
 }
 .status-dot.live { background: var(--success); box-shadow: 0 0 8px var(--success); }
-.status-text { font-size: 8px; color: var(--text-muted); letter-spacing: 1px; }
+.status-text { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; }
 
 .main-content {
-  flex: 1; max-width: 960px; padding: 32px 40px 64px; overflow-y: auto;
+  flex: 1; max-width: 1400px; margin: 0 auto;
+  padding: 32px 48px 80px; overflow-y: auto;
 }
 
 .topbar {
@@ -188,7 +203,7 @@ async function handleGenerate(ids: string[]) {
 
 .page-title {
   font-family: var(--font-heading);
-  font-size: 22px; font-weight: 700; margin: 0;
+  font-size: 26px; font-weight: 700; margin: 0;
   letter-spacing: -0.3px; color: var(--text-primary);
 }
 </style>

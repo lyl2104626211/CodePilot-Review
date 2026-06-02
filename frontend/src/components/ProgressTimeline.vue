@@ -1,60 +1,78 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps<{
   loading: boolean
   status?: string
   warnings?: string[]
 }>()
 
-const stages = ['PARSE', 'FETCH', 'CONTEXT', 'SUMMARY', 'RISKS', 'SUGGEST', 'GUARD', 'REPORT']
+const stages = [
+  { key: 'parse_pr_url', label: 'Parse URL' },
+  { key: 'fetch_pr', label: 'Fetch PR' },
+  { key: 'collect_context', label: 'Context' },
+  { key: 'generate_summary', label: 'Summary' },
+  { key: 'detect_risks', label: 'Risks' },
+  { key: 'generate_suggestions', label: 'Suggestions' },
+  { key: 'guardrail_check', label: 'Guardrail' },
+  { key: 'assemble_report', label: 'Report' },
+]
 
-function ss(i: number): 'done' | 'active' | 'pending' | 'fail' {
-  if (props.status === 'failed' && !props.loading) return 'fail'
-  if (!props.loading && props.status === 'succeeded') return 'done'
-  if (props.loading && i === 0) return 'active'
-  return 'pending'
-}
+const activeIdx = computed(() => {
+  if (!props.loading && props.status === 'succeeded') return stages.length
+  if (props.loading) return 1
+  return 0
+})
 </script>
 
 <template>
-  <div v-if="loading || status === 'succeeded' || status === 'failed'" class="pbar">
-    <div class="stages">
-      <div v-for="(label, i) in stages" :key="label" :class="['st', ss(i)]">
-        <span class="dot"></span>
-        <span class="lbl">{{ label }}</span>
+  <div class="tl">
+    <div class="tl-bar">
+      <div class="tl-fill" :style="{ width: (activeIdx / stages.length) * 100 + '%' }"></div>
+    </div>
+    <div class="tl-labels">
+      <div v-for="(s, i) in stages" :key="s.key" :class="['tl-stage', { done: i < activeIdx, active: i === activeIdx - 1 && loading }]">
+        <span class="tl-dot"></span>
+        <span class="tl-name">{{ s.label }}</span>
       </div>
     </div>
-    <div v-if="warnings?.length" class="warn-list">
-      <p v-for="(w, i) in warnings" :key="i" class="wi">{{ w }}</p>
+    <div v-if="warnings?.length" class="tl-warn">
+      <span v-for="(w, i) in warnings" :key="i" class="wl">! {{ w }}</span>
     </div>
   </div>
 </template>
 
 <style scoped>
-.pbar {
-  margin-bottom: 24px; padding: 14px 18px;
-  background: var(--bg-secondary); border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+.tl { margin-bottom: 24px; padding: 12px 0; }
+.tl-bar {
+  height: 3px; background: var(--border); border-radius: 2px;
+  margin-bottom: 10px; overflow: hidden;
 }
-.stages { display: flex; gap: 0; overflow-x: auto; }
-.st {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 9px; font-weight: 600; letter-spacing: 1px;
-  color: var(--text-muted); padding: 0 8px;
+.tl-fill {
+  height: 100%; background: var(--teal);
+  border-radius: 2px; transition: width 0.5s ease;
 }
-.st:first-child { padding-left: 0; }
-.st::after { content: '\2192'; margin-left: 8px; color: var(--border); font-size: 10px; }
-.st:last-child::after { display: none; }
-.st.done { color: var(--success); }
-.st.done .dot { background: var(--success); }
-.st.active { color: var(--accent); }
-.st.active .dot { background: var(--accent); animation: pdot 1s infinite; }
-.st.fail { color: var(--danger); }
-.st.fail .dot { background: var(--danger); }
-.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border-hover); flex-shrink: 0; }
-@keyframes pdot {
-  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
-  50% { box-shadow: 0 0 0 4px transparent; }
+.tl-labels {
+  display: flex; justify-content: space-between; gap: 4px;
 }
-.warn-list { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-.wi { margin: 2px 0; font-size: 11px; color: var(--warning); font-family: var(--font-mono); }
+.tl-stage {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  opacity: 0.35; transition: opacity 0.3s;
+}
+.tl-stage.done { opacity: 1; }
+.tl-stage.active { opacity: 1; }
+.tl-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);
+}
+.tl-stage.done .tl-dot { background: var(--teal); }
+.tl-stage.active .tl-dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.tl-name {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.3px;
+  color: var(--text-muted); white-space: nowrap;
+}
+.tl-stage.done .tl-name { color: var(--text-secondary); }
+.tl-stage.active .tl-name { color: var(--accent); font-weight: 600; }
+
+.tl-warn { margin-top: 10px; }
+.wl { display: block; font-size: 11px; color: var(--warning); margin: 2px 0; }
 </style>

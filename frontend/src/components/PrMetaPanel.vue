@@ -8,65 +8,51 @@ defineProps<{
 
 <template>
   <div v-if="pr" class="meta-panel">
-    <div class="meta-header">PR DETAILS</div>
+    <div class="section-head">PR DETAILS</div>
     <div class="meta-grid">
-      <div class="meta-field">
-        <span class="meta-key">Title</span>
-        <span class="meta-val">{{ pr.title }}</span>
+      <div class="field">
+        <span class="key">Title</span>
+        <span class="val">{{ pr.title }}</span>
       </div>
-      <div class="meta-field">
-        <span class="meta-key">Author</span>
-        <span class="meta-val">{{ pr.author }}</span>
+      <div class="field">
+        <span class="key">Author</span>
+        <span class="val">{{ pr.author }}</span>
       </div>
-      <div class="meta-field">
-        <span class="meta-key">Branch</span>
-        <span class="meta-val">{{ pr.head_branch }} &rarr; {{ pr.base_branch }}</span>
+      <div class="field">
+        <span class="key">Branch</span>
+        <span class="val">{{ pr.head_branch }} &rarr; {{ pr.base_branch }}</span>
       </div>
-      <div class="meta-field">
-        <span class="meta-key">Files</span>
-        <span class="meta-val num">{{ pr.changed_files }}</span>
+      <div class="field">
+        <span class="key">Files</span>
+        <span class="val">{{ pr.changed_files }}</span>
       </div>
-      <div class="meta-field">
-        <span class="meta-key">Changes</span>
-        <span class="meta-val">
-          <span class="add">+{{ pr.additions }}</span>
-          <span class="del">&minus;{{ pr.deletions }}</span>
-        </span>
+      <div class="field">
+        <span class="key">Changes</span>
+        <span class="val">+{{ pr.additions }} &minus;{{ pr.deletions }}</span>
       </div>
-      <div class="meta-field">
-        <span class="meta-key">Commits</span>
-        <span class="meta-val num">{{ pr.commit_count }}</span>
+      <div class="field">
+        <span class="key">Commits</span>
+        <span class="val">{{ pr.commit_count }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.meta-panel { margin-bottom: 24px; }
-
-.meta-header {
-  font-family: var(--font-heading);
-  font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
-  color: var(--accent); margin-bottom: 10px;
-}
-
-.meta-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr);
-  gap: 14px 24px; padding: 16px 20px;
+.meta-panel {
+  margin-bottom: 24px; padding: 16px 22px;
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius-lg); border-left: 3px solid var(--accent);
 }
-
-.meta-field { display: flex; flex-direction: column; gap: 2px; }
-.meta-key {
-  font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
-  color: var(--text-muted); text-transform: uppercase;
+.section-head {
+  font-family: var(--font-heading); font-size: 15px; font-weight: 700;
+  letter-spacing: 0.5px; color: var(--accent); margin-bottom: 14px;
 }
-.meta-val {
-  font-size: 13px; color: var(--text-primary);
-  font-family: var(--font-mono); word-break: break-all;
+.meta-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 16px 28px;
 }
-.meta-val.num { color: var(--accent); font-weight: 600; }
-.add { color: var(--success); }
-.del { color: var(--danger); margin-left: 6px; }
+.field { display: flex; flex-direction: column; gap: 3px; }
+.key { font-size: 11px; font-weight: 600; letter-spacing: 1px; color: var(--text-muted); }
+.val { font-size: 14px; color: var(--text-primary); font-weight: 500; }
 </style>

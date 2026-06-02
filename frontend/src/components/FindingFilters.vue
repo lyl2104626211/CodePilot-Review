@@ -9,6 +9,12 @@ const emit = defineEmits<{ 'update:filtered': [findings: RiskFinding[]] }>()
 const sev = ref<string>('all')
 const lowConf = ref(true)
 
+// 当 findings 数据源变化（新 Review）时，重置过滤器
+watch(() => props.findings, () => {
+  sev.value = 'all'
+  lowConf.value = true
+})
+
 const filtered = computed(() => {
   let r = props.findings
   if (sev.value !== 'all') r = r.filter(f => f.severity === sev.value)

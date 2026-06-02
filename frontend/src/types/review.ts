@@ -96,7 +96,7 @@ export interface CreateReviewCommentsResponse {
 
 export interface ReviewTaskStatus {
   task_id: string
-  status: string
+  status: 'queued' | 'running' | 'succeeded' | 'failed'
   progress_events: { node: string; status: string; message: string }[]
   warnings: string[]
 }

@@ -59,9 +59,9 @@ function handleSubmit() {
 .input-section { margin-bottom: 24px; }
 
 .input-row {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 12px;
   background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 10px 14px;
+  border-radius: var(--radius-lg); padding: 12px 16px;
   transition: border-color 0.2s;
 }
 .input-row:focus-within {
@@ -69,22 +69,22 @@ function handleSubmit() {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
-.prompt { color: var(--accent); font-weight: 600; font-size: 15px; user-select: none; }
+.prompt { color: var(--accent); font-weight: 600; font-size: 17px; user-select: none; }
 
 .input-row input {
   flex: 1; background: transparent; border: none; outline: none;
   color: var(--text-primary); font-family: var(--font-mono);
-  font-size: 13px; letter-spacing: 0.2px;
+  font-size: 14px; letter-spacing: 0.2px;
 }
-.input-row input::placeholder { color: var(--text-muted); }
+.input-row input::placeholder { color: var(--text-muted); font-size: 13px; }
 .input-row input:disabled { opacity: 0.5; }
 
 .input-row button {
-  padding: 8px 20px; background: var(--accent); color: #000;
+  padding: 9px 24px; background: var(--accent); color: #000;
   border: none; border-radius: var(--radius); cursor: pointer;
-  font-family: var(--font-heading); font-size: 13px; font-weight: 700;
+  font-family: var(--font-heading); font-size: 14px; font-weight: 700;
   letter-spacing: 0.3px; white-space: nowrap; transition: all 0.2s;
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 8px;
 }
 .input-row button:hover:not(:disabled) {
   background: #fcd34d;
@@ -93,7 +93,7 @@ function handleSubmit() {
 .input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .spinner {
-  width: 12px; height: 12px;
+  width: 14px; height: 14px;
   border: 2px solid #000; border-top-color: transparent;
   border-radius: 50%; animation: spin 0.6s linear infinite;
 }
@@ -105,19 +105,19 @@ function handleSubmit() {
 }
 
 .mode-tag {
-  font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
-  padding: 2px 6px; border: 1px solid var(--border);
+  font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
+  padding: 2px 8px; border: 1px solid var(--border);
   border-radius: 2px; color: var(--text-muted);
 }
 .mode-tag.live { color: var(--teal); border-color: var(--teal); }
-.input-hint { font-size: 11px; color: var(--text-muted); }
+.input-hint { font-size: 12px; color: var(--text-muted); }
 
 .error-line {
   display: flex; align-items: center; gap: 8px;
-  margin: 8px 0 0; padding: 8px 12px;
+  margin: 8px 0 0; padding: 10px 14px;
   background: var(--danger-glow);
   border: 1px solid rgba(248, 113, 113, 0.25);
-  border-radius: var(--radius); font-size: 12px; color: var(--danger);
+  border-radius: var(--radius); font-size: 13px; color: var(--danger);
 }
-.error-prefix { font-weight: 700; font-size: 14px; }
+.error-prefix { font-weight: 700; font-size: 16px; }
 </style>

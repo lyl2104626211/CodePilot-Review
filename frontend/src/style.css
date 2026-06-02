@@ -37,8 +37,8 @@
 body {
   margin: 0;
   font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.65;
   color: var(--text-primary);
   background: var(--bg-root);
   -webkit-font-smoothing: antialiased;

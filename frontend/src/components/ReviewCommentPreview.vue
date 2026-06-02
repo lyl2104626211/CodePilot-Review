@@ -1,33 +1,57 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import type { ReviewCommentDraft } from '../types/review'
 
-defineProps<{
+const props = defineProps<{
   comments: ReviewCommentDraft[]
   markdown: string
 }>()
 
 const copied = ref(false)
 const dlDone = ref(false)
+let copyTimer: ReturnType<typeof setTimeout> | null = null
+let dlTimer: ReturnType<typeof setTimeout> | null = null
+
+onUnmounted(() => {
+  if (copyTimer) clearTimeout(copyTimer)
+  if (dlTimer) clearTimeout(dlTimer)
+})
+
+/** 安全渲染 Markdown 正文：先转义 HTML 防 XSS，再应用简单格式 */
+function renderSafeBody(body: string): string {
+  // 1. 先转义所有 HTML 标签
+  const escaped = body
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+
+  // 2. 再应用 Markdown 格式（此时内容已安全）
+  return escaped
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.*?)`/g, '<code style="background:#1c1f28;padding:1px 4px;border-radius:2px;font-family:monospace">$1</code>')
+    .replace(/^&gt; (.*)$/gm, '<em style="color:#8b9099">$1</em>')
+}
 
 async function copyAll() {
   try {
-    await navigator.clipboard.writeText(markdown.value)
+    await navigator.clipboard.writeText(props.markdown)
     copied.value = true
-    setTimeout(() => copied.value = false, 2000)
+    copyTimer = setTimeout(() => copied.value = false, 2000)
   } catch {
     // fallback: no clipboard support
   }
 }
 
 function downloadMd() {
-  const blob = new Blob([markdown.value], { type: 'text/markdown;charset=utf-8' })
+  const blob = new Blob([props.markdown], { type: 'text/markdown;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url; a.download = 'codepilot-review.md'; a.click()
   URL.revokeObjectURL(url)
   dlDone.value = true
-  setTimeout(() => dlDone.value = false, 2000)
+  dlTimer = setTimeout(() => dlDone.value = false, 2000)
 }
 </script>
 
@@ -55,7 +79,8 @@ function downloadMd() {
           <span v-if="c.file_path" class="cmt-file">{{ c.file_path }}</span>
           <span v-if="c.severity" class="cmt-sev">{{ c.severity }}</span>
         </div>
-        <div class="cmt-body" v-html="c.body.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`(.*?)`/g, '<code style=\'background:#1c1f28;padding:1px 4px;border-radius:2px;font-family:monospace\'>$1</code>').replace(/^> (.*)$/gm, '<em style=\'color:#8b9099\'>$1</em>')"></div>
+        <!-- 使用 renderSafeBody 防 XSS -->
+        <div class="cmt-body" v-html="renderSafeBody(c.body)"></div>
       </div>
 
       <div v-if="markdown" class="md-full">
