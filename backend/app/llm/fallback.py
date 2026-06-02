@@ -24,6 +24,8 @@ class FallbackLLMClient:
             return self._generate_findings(user_prompt)
         elif "suggestion" in schema_name.lower():
             return self._generate_suggestions(user_prompt)
+        elif "patch" in schema_name.lower():
+            return self._generate_patch_fallback(user_prompt)
         else:
             return {"message": "No fallback available for this schema"}
 
@@ -43,11 +45,15 @@ class FallbackLLMClient:
         findings = []
         risk_id = 1
 
-        # 检查是否有新增文件没有对应测试
-        has_new_backend = "backend" in _prompt and ("added" in _prompt or "new file" in _prompt.lower())
-        has_tests = "test" in _prompt.lower()
+        # 基于文件列表做简单的启发式检测（Fallback 模式，无 LLM API）
+        # _prompt 包含文件路径列表，如 "- [backend] app/services/foo.py (added, +10 -0)"
+        prompt_lower = _prompt.lower()
+        has_py_files = ".py" in prompt_lower
+        has_added = "added" in prompt_lower or "new file" in prompt_lower
+        has_test_files = any(pat in prompt_lower for pat in ["test_", "_test", "tests/", "test/", "spec/", "__tests__/"])
+        has_modified = "modified" in prompt_lower
 
-        if has_new_backend and not has_tests:
+        if has_py_files and has_added and not has_test_files:
             findings.append({
                 "id": f"risk_{risk_id:03d}",
                 "severity": "medium",
@@ -61,8 +67,8 @@ class FallbackLLMClient:
             })
             risk_id += 1
 
-        # 检查 patch 大小
-        if "modifications" in _prompt.lower():
+        # 检查是否有代码修改
+        if has_modified:
             findings.append({
                 "id": f"risk_{risk_id:03d}",
                 "severity": "low",
@@ -118,4 +124,68 @@ class FallbackLLMClient:
                 "测试异常场景：无效参数、服务不可用、超时",
                 "验证 API 返回的错误码和消息格式是否符合规范",
             ],
+        }
+
+    def _generate_patch_fallback(self, prompt: str) -> dict:
+        """基于 prompt 内容生成 Fallback 修复代码预览"""
+        # 从 prompt 中提取一些上下文线索
+        prompt_lower = prompt.lower()
+
+        # 根据 suggestion 类型推测修复模式
+        if "try/except" in prompt_lower or "try" in prompt_lower or "except" in prompt_lower:
+            original_code = "result = await graph.ainvoke(state)"
+            suggested_code = (
+                "try:\n"
+                "    result = await graph.ainvoke(state)\n"
+                "except Exception as exc:\n"
+                "    logger.error('Workflow failed: %s', exc)\n"
+                "    raise"
+            )
+            explanation = "为 graph.ainvoke 增加 try/except 异常捕获，避免未处理异常导致任务状态异常。"
+        elif "log" in prompt_lower and "missing" in prompt_lower:
+            original_code = "def process(data):\n    return transform(data)"
+            suggested_code = (
+                "def process(data):\n"
+                "    logger.info('Processing data | size=%d', len(data))\n"
+                "    result = transform(data)\n"
+                "    logger.debug('Process completed | result=%s', result)\n"
+                "    return result"
+            )
+            explanation = "为关键函数增加日志输出，便于排查问题和监控运行状态。"
+        elif "test" in prompt_lower or "测试" in prompt:
+            original_code = "def add(a, b):\n    return a + b"
+            suggested_code = (
+                "def add(a, b):\n"
+                "    return a + b\n\n\n"
+                "def test_add():\n"
+                "    assert add(1, 2) == 3\n"
+                "    assert add(-1, 1) == 0\n"
+                "    assert add(0, 0) == 0"
+            )
+            explanation = "为函数补充单元测试用例，覆盖正常路径和边界条件。"
+        elif "validation" in prompt_lower or "validate" in prompt_lower or "校验" in prompt:
+            original_code = "def create_item(data):\n    return db.insert(data)"
+            suggested_code = (
+                "def create_item(data):\n"
+                "    if not data or not data.get('name'):\n"
+                "        raise ValueError('name is required')\n"
+                "    return db.insert(data)"
+            )
+            explanation = "为函数增加输入参数校验，避免无效数据导致后续错误。"
+        else:
+            original_code = "def example():\n    pass"
+            suggested_code = (
+                "def example():\n"
+                "    # TODO: implement based on the review suggestion\n"
+                "    pass"
+            )
+            explanation = "Fallback 模式无法根据具体上下文生成精准修复代码，请参考 Review 建议手动修改。"
+
+        return {
+            "file_path": "",
+            "start_line": None,
+            "end_line": None,
+            "original_code": original_code,
+            "suggested_code": suggested_code,
+            "explanation": explanation,
         }
