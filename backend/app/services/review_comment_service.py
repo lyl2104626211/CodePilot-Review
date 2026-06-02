@@ -87,6 +87,7 @@ def _render_comment_body(suggestion, finding, original_patch: str = "") -> str:
     """渲染单条评论正文（GitHub 风格 Markdown）"""
     lines = []
 
+    # 标题 + 位置
     if finding:
         lines.append(f"**Review 建议：{finding.title}**")
     else:
@@ -96,31 +97,40 @@ def _render_comment_body(suggestion, finding, original_patch: str = "") -> str:
     if suggestion.file_path:
         lines.append(f"\n位置：`{suggestion.file_path}`")
 
-    # 原始代码（从 PR diff 中提取或使用 evidence）
-    original_code = _extract_original_code(suggestion, finding, original_patch)
-    if original_code:
-        lines.append("\n**原始代码**")
-        lines.append("```")
-        lines.append(original_code)
-        lines.append("```")
-
+    # 问题说明（evidence + 分析 + 原因合并）
+    parts = []
     if finding and finding.evidence:
-        lines.append(f"\n**问题证据**\n{finding.evidence}")
+        parts.append(finding.evidence)
+    parts.append(suggestion.comment)
+    parts.append(suggestion.rationale)
+    lines.append(f"\n**问题说明**\n" + "；".join(parts))
 
-    lines.append(f"\n**问题分析**\n{suggestion.comment}")
-
-    lines.append(f"\n**修改原因**\n{suggestion.rationale}")
-
-    # 建议修改代码
+    # 代码对比：原始 → 建议，紧挨着
+    original_code = _extract_original_code(suggestion, finding, original_patch)
     fix_code = _extract_fix_code(suggestion.suggested_fix)
-    if fix_code:
-        lines.append("\n**建议修改**")
-        lines.append("```python")
-        lines.append(fix_code)
-        lines.append("```")
-    else:
-        lines.append(f"\n**建议修改**\n{suggestion.suggested_fix}")
 
+    if original_code or fix_code:
+        lines.append("\n---")
+        lines.append("**代码对比**")
+        lines.append("")
+
+        if original_code:
+            lines.append("修改前：")
+            lines.append("```")
+            lines.append(original_code.strip())
+            lines.append("```")
+            lines.append("")
+
+        if fix_code:
+            lines.append("修改后：")
+            lines.append("```python")
+            lines.append(fix_code.strip())
+            lines.append("```")
+        elif not fix_code and suggestion.suggested_fix:
+            lines.append(f"\n**修改后**\n{suggestion.suggested_fix}")
+        lines.append("---")
+
+    # 元信息
     if finding:
         lines.append(f"\n> 置信度：{finding.confidence:.0%} | 严重程度：{finding.severity.value}")
 
