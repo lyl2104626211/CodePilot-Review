@@ -40,13 +40,21 @@ def create_review_comment_drafts(
         if sid not in suggestion_map:
             raise CommentServiceError(f"Unknown suggestion id: {sid}")
 
+    # 构建文件 → patch 映射
+    file_patches: dict[str, str] = {}
+    if report.pr and report.pr.files:
+        for pf in report.pr.files:
+            if pf.patch:
+                file_patches[pf.path] = pf.patch
+
     # 生成单条评论
     comments: list[ReviewCommentDraft] = []
     for i, sid in enumerate(request.suggestion_ids):
         s = suggestion_map[sid]
         finding = finding_map.get(s.finding_id) if s.finding_id else None
+        original_patch = file_patches.get(s.file_path or "", "")
 
-        body = _render_comment_body(s, finding)
+        body = _render_comment_body(s, finding, original_patch)
 
         comments.append(ReviewCommentDraft(
             id=f"comment_{i + 1:03d}",
@@ -75,26 +83,43 @@ def create_review_comment_drafts(
     )
 
 
-def _render_comment_body(suggestion, finding) -> str:
+def _render_comment_body(suggestion, finding, original_patch: str = "") -> str:
     """渲染单条评论正文（GitHub 风格 Markdown）"""
     lines = []
 
     if finding:
         lines.append(f"**Review 建议：{finding.title}**")
     else:
-        lines.append(f"**Review 建议：{suggestion.comment[:60]}...**")
+        preview = suggestion.comment[:60] if suggestion.comment else "(no comment)"
+        lines.append(f"**Review 建议：{preview}**")
 
     if suggestion.file_path:
         lines.append(f"\n位置：`{suggestion.file_path}`")
 
+    # 原始代码（从 PR diff 中提取或使用 evidence）
+    original_code = _extract_original_code(suggestion, finding, original_patch)
+    if original_code:
+        lines.append("\n**原始代码**")
+        lines.append("```")
+        lines.append(original_code)
+        lines.append("```")
+
     if finding and finding.evidence:
         lines.append(f"\n**问题证据**\n{finding.evidence}")
 
-    lines.append(f"\n**建议**\n{suggestion.comment}")
+    lines.append(f"\n**问题分析**\n{suggestion.comment}")
 
-    lines.append(f"\n**原因**\n{suggestion.rationale}")
+    lines.append(f"\n**修改原因**\n{suggestion.rationale}")
 
-    lines.append(f"\n**建议修改**\n{suggestion.suggested_fix}")
+    # 建议修改代码
+    fix_code = _extract_fix_code(suggestion.suggested_fix)
+    if fix_code:
+        lines.append("\n**建议修改**")
+        lines.append("```python")
+        lines.append(fix_code)
+        lines.append("```")
+    else:
+        lines.append(f"\n**建议修改**\n{suggestion.suggested_fix}")
 
     if finding:
         lines.append(f"\n> 置信度：{finding.confidence:.0%} | 严重程度：{finding.severity.value}")
@@ -103,6 +128,40 @@ def _render_comment_body(suggestion, finding) -> str:
         lines.append("\n> 建议合并前处理")
 
     return "\n".join(lines)
+
+
+def _extract_original_code(suggestion, finding, patch: str) -> str:
+    """从 finding evidence 或 PR patch 中提取原始代码片段"""
+    # 优先从 evidence 中提取代码块
+    if finding and finding.evidence:
+        ev = finding.evidence.strip()
+        # 如果 evidence 本身就像代码（含缩进/换行/关键字），直接返回
+        if "\n" in ev and len(ev) > 20:
+            return ev
+        # 如果是短文本描述，不当作代码返回
+
+    # 从 PR patch 中提取相关片段
+    if patch:
+        trimmed = patch.strip()
+        if trimmed:
+            # 截取前 1500 字符，足够展示上下文
+            return trimmed[:1500] + ("\n..." if len(trimmed) > 1500 else "")
+
+    return ""
+
+
+def _extract_fix_code(suggested_fix: str) -> str:
+    """判断 suggested_fix 是否包含代码，有则提取"""
+    sf = suggested_fix.strip()
+    # 如果包含代码特征（缩进、def、try、return 等关键字），作为代码返回
+    code_indicators = ["def ", "try:", "    ", "\t", "return ", "if ", "for ", "while ",
+                       "import ", "class ", "except", "@", "self."]
+    if any(ind in sf for ind in code_indicators):
+        return sf
+    # 如果 suggest_fix 有多行且有明显的代码结构
+    if "\n" in sf and len(sf) > 40:
+        return sf
+    return ""
 
 
 def _render_markdown(report, comments, include_summary=True, include_test_recommendations=True) -> str:
@@ -132,8 +191,10 @@ def _render_markdown(report, comments, include_summary=True, include_test_recomm
     return "\n".join(lines)
 
 
-def get_report_quality(report: ReviewReport) -> dict:
+def get_report_quality(report: ReviewReport) -> "ReportQualitySummary":
     """从 ReviewReport 提取质量摘要"""
+    from app.schemas.review import ReportQualitySummary
+
     findings = report.findings
     suggestions = report.suggestions
 
@@ -149,12 +210,12 @@ def get_report_quality(report: ReviewReport) -> dict:
     if blocking > 0:
         notes.append(f"{blocking} 条建议建议在合并前处理")
 
-    return {
-        "total_findings": len(findings),
-        "high_confidence_findings": high,
-        "low_confidence_findings": low,
-        "blocking_suggestions": blocking,
-        "warning_count": len(report.warnings),
-        "fallback_used": len(report.warnings) > 0,
-        "notes": notes,
-    }
+    return ReportQualitySummary(
+        total_findings=len(findings),
+        high_confidence_findings=high,
+        low_confidence_findings=low,
+        blocking_suggestions=blocking,
+        warning_count=len(report.warnings),
+        fallback_used=len(report.warnings) > 0,
+        notes=notes,
+    )
