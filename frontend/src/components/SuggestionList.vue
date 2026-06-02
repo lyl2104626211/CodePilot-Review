@@ -17,7 +17,7 @@ defineProps<{
       </div>
       <div v-for="s in suggestions" :key="s.id" class="sg-card">
         <div class="sg-top">
-          <span :class="['block-tag', s.blocking ? 'block' : 'allow']">
+          <span :class="['blk-tag', s.blocking ? 'block' : 'allow']">
             {{ s.blocking ? 'BLOCK' : 'OK' }}
           </span>
           <span v-if="s.file_path" class="sg-file">{{ s.file_path }}</span>
@@ -44,14 +44,16 @@ defineProps<{
 <style scoped>
 .sg-sec, .test-sec { margin-bottom: 24px; }
 .test-sec { padding-top: 20px; border-top: 1px solid var(--border); }
+
 .sec-head {
   display: flex; align-items: center; gap: 8px;
-  font-family: var(--font-heading); font-size: 13px;
+  font-family: var(--font-heading); font-size: 15px;
   font-weight: 700; letter-spacing: 0.5px;
-  color: var(--teal); margin-bottom: 12px;
+  color: var(--teal); margin-bottom: 14px;
 }
-.sec-icon { font-size: 13px; }
-.sec-count { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+.sec-icon { font-size: 15px; }
+.sec-count { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+
 .sg-card {
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 14px 18px;
@@ -59,20 +61,21 @@ defineProps<{
 }
 .sg-card:hover { border-color: var(--border-hover); }
 .sg-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.block-tag {
-  font-size: 9px; font-weight: 700; letter-spacing: 1px;
-  padding: 2px 6px; border-radius: 2px; font-family: var(--font-mono);
+.blk-tag {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  padding: 2px 8px; border-radius: 2px; font-family: var(--font-mono);
 }
-.block-tag.block { color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.4); }
-.block-tag.allow { color: var(--success); border: 1px solid rgba(74, 222, 128, 0.4); }
-.sg-file { font-size: 11px; color: var(--teal); font-family: var(--font-mono); }
+.blk-tag.block { color: var(--danger); border: 1px solid rgba(248, 113, 113, 0.4); }
+.blk-tag.allow { color: var(--success); border: 1px solid rgba(74, 222, 128, 0.4); }
+.sg-file { font-size: 12px; color: var(--teal); font-family: var(--font-mono); }
 .sg-body { display: flex; flex-direction: column; gap: 5px; }
-.sg-line { font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+.sg-line { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
 .sg-label {
-  font-size: 8px; font-weight: 700; letter-spacing: 1.2px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
   color: var(--text-muted); margin-right: 8px;
 }
+
 .test-list { margin: 0; padding-left: 18px; list-style: square; }
-.test-list li { margin-bottom: 4px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.test-list li { margin-bottom: 4px; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 .test-list li::marker { color: var(--accent); }
 </style>
